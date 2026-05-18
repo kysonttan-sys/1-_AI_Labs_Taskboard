@@ -135,7 +135,7 @@ async function main() {
   await prisma.appSettings.upsert({
     where: { id: 'app' },
     update: {},
-    create: { id: 'app', setupComplete: false },
+    create: { id: 'app', setupComplete: true },
   });
 
   console.log('Seed data created successfully!');
