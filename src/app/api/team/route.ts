@@ -1,0 +1,22 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db/client';
+
+export async function POST(request: NextRequest) {
+  const { name, pin, color } = await request.json();
+  if (!name || !pin) return NextResponse.json({ error: 'Name and PIN are required' }, { status: 400 });
+
+  const bcrypt = await import('bcryptjs');
+  const hashedPin = await bcrypt.hash(pin, 10);
+  const user = await prisma.user.create({
+    data: { name, pin: hashedPin, color: color || '#6366f1', role: 'member' },
+  });
+  return NextResponse.json({ id: user.id, name: user.name, color: user.color, role: user.role });
+}
+
+export async function DELETE(request: NextRequest) {
+  const { userId } = await request.json();
+  if (!userId) return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+
+  await prisma.user.delete({ where: { id: userId } });
+  return NextResponse.json({ success: true });
+}

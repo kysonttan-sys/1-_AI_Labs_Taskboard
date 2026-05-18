@@ -1,0 +1,247 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  pin       String
+  color     String   @default("#6366f1")
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedCards          CardAssignee[]
+  comments              Comment[]
+  chatMessages           AIChatMessage[]
+  chatMsgs              ChatMessage[]
+  googleToken           GoogleCalendarToken?
+  calendarEvents        CalendarEvent[]
+  notifications          Notification[]
+  triggeredNotifications Notification[] @relation("NotificationTrigger")
+}
+
+model Board {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  icon        String   @default("📋")
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lists         List[]
+  labels        Label[]
+  cards         Card[]
+  chatMessages  ChatMessage[]
+  notifications Notification[]
+}
+
+model Label {
+  id      String @id @default(cuid())
+  name    String
+  color   String
+  boardId String
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  cards CardLabel[]
+
+  @@unique([boardId, name])
+}
+
+model List {
+  id        String   @id @default(cuid())
+  title     String
+  position  Int
+  boardId   String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cards Card[]
+
+  @@index([boardId])
+}
+
+model Card {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  position    Int
+  status      String    @default("todo")
+  priority    String    @default("medium")
+  progress    Int       @default(0)
+  startDate   DateTime?
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  listId  String
+  list    List  @relation(fields: [listId], references: [id], onDelete: Cascade)
+  boardId String
+  board   Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  assignees     CardAssignee[]
+
+  labels        CardLabel[]
+  comments      Comment[]
+  checklist     ChecklistItem[]
+  dependsOn     CardDependency[] @relation("DependsOnCard")
+  dependents    CardDependency[] @relation("DependentCard")
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([boardId])
+  @@index([listId])
+}
+
+model CardLabel {
+  cardId  String
+  labelId String
+  card    Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, labelId])
+}
+
+model CardDependency {
+  id               String @id @default(cuid())
+  dependsOnCardId  String
+  dependentCardId  String
+  type             String @default("finish_to_start")
+
+  dependsOnCard Card @relation("DependsOnCard", fields: [dependsOnCardId], references: [id], onDelete: Cascade)
+  dependentCard Card @relation("DependentCard", fields: [dependentCardId], references: [id], onDelete: Cascade)
+
+  @@unique([dependsOnCardId, dependentCardId])
+}
+
+model ChecklistItem {
+  id       String  @id @default(cuid())
+  text     String
+  checked  Boolean @default(false)
+  position Int     @default(0)
+  cardId   String
+  card     Card    @relation(fields: [cardId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  text      String
+  cardId    String
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cardId])
+}
+
+model AIChatMessage {
+  id        String   @id @default(cuid())
+  role      String
+  content   String
+  context   String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  boardId   String?
+  cardId    String?
+  createdAt DateTime @default(now())
+}
+
+model AIDigest {
+  id        String   @id @default(cuid())
+  weekStart DateTime
+  weekEnd   DateTime
+  summary   String
+  boardId   String?
+  createdAt DateTime @default(now())
+}
+
+model AppSettings {
+  id            String  @id @default("app")
+  ollamaUrl     String  @default("http://localhost:11434")
+  ollamaModel   String  @default("kimi-k2.6:cloud")
+  setupComplete Boolean @default(false)
+}
+
+model Notification {
+  id            String   @id @default(cuid())
+  type          String
+  title         String
+  body          String?
+  read          Boolean  @default(false)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId        String?
+  card          Card?    @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  boardId       String?
+  board         Board?   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  triggerUserId String?
+  triggerUser   User?    @relation("NotificationTrigger", fields: [triggerUserId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+model ChatMessage {
+  id        String       @id @default(cuid())
+  text      String
+  boardId   String
+  board     Board        @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  replyToId String?
+  replyTo   ChatMessage? @relation("ChatReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[] @relation("ChatReplies")
+  createdAt DateTime     @default(now())
+
+  @@index([boardId, createdAt])
+}
+
+model CardAssignee {
+  cardId String
+  userId String
+  card   Card  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, userId])
+  @@index([userId])
+}
+
+model GoogleCalendarToken {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken   String
+  refreshToken   String
+  expiryDate    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model CalendarEvent {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  allDay      Boolean  @default(false)
+  color       String   @default("#10b981")
+  visibility  String   @default("private")
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([startDate])
+}

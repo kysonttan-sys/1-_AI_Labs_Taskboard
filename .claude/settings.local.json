@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell *)",
+      "Bash(npm run *)",
+      "Bash(Start-Sleep -Seconds 5)",
+      "Bash(Get-Content \"C:\\\\Users\\\\kyson\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Task-Management-System-taskboard\\\\75fbf6c4-c79a-44b1-88f7-020a139976ff\\\\tasks\\\\bvcnglcxp.output\" -Tail 15)",
+      "Bash(curl *)",
+      "Bash(tasklist)",
+      "Bash(findstr /i \"cloudflared\")",
+      "Bash(Select-String -Pattern \"cloudflared\" -SimpleMatch)",
+      "PowerShell(Get-Process *)",
+      "Bash(timeout 15)",
+      "Bash(cloudflared tunnel *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(findstr LISTENING)",
+      "WebFetch(domain:juice-records-graphical-jewel.trycloudflare.com)",
+      "Bash(findstr /i \"cloudflare node next dev\")",
+      "Bash(npx prisma *)",
+      "Bash(npx next *)",
+      "Bash(ipconfig)",
+      "Bash(taskkill //F //IM cloudflared.exe)",
+      "Bash(npm uninstall *)",
+      "Bash(npm install *)",
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(echo \"dev.db\")",
+      "Bash(echo \"screenshot-temp.png\")",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

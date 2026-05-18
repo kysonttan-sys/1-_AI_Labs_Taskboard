@@ -1,0 +1,321 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Settings, Cpu, Users, Trash2, Plus, ExternalLink, Calendar, Unlink } from 'lucide-react';
+import { getInitials } from '@/lib/utils/initials';
+
+interface User {
+  id: string;
+  name: string;
+  color: string;
+  role: string;
+}
+
+interface AppSettings {
+  ollamaUrl: string;
+  ollamaModel: string;
+  setupComplete: boolean;
+}
+
+interface ModelInfo {
+  connected: boolean;
+  models: string[];
+  currentModel: string;
+  ollamaUrl: string;
+}
+
+export default function SettingsPage() {
+  const [settings, setSettings] = useState<AppSettings>({ ollamaUrl: 'http://localhost:11434', ollamaModel: 'kimi-k2.6:cloud', setupComplete: false });
+  const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberPin, setNewMemberPin] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [googleConnected, setGoogleConnected] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+    loadUsers();
+    checkOllama();
+    checkGoogleCalendar();
+  }, []);
+
+  async function loadSettings() {
+    const res = await fetch('/api/settings');
+    setSettings(await res.json());
+  }
+
+  async function loadUsers() {
+    const res = await fetch('/api/users');
+    setUsers(await res.json());
+  }
+
+  async function checkOllama() {
+    try {
+      const res = await fetch('/api/ai/models');
+      setModelInfo(await res.json());
+    } catch {
+      setModelInfo({ connected: false, models: [], currentModel: '', ollamaUrl: '' });
+    }
+  }
+
+  async function saveSettings() {
+    setSaving(true);
+    await fetch('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    setMessage('Settings saved');
+    setSaving(false);
+    setTimeout(() => setMessage(''), 3000);
+    checkOllama();
+  }
+
+  async function addMember() {
+    if (!newMemberName.trim() || !newMemberPin.trim()) return;
+    await fetch('/api/team', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newMemberName.trim(), pin: newMemberPin.trim() }),
+    });
+    setNewMemberName('');
+    setNewMemberPin('');
+    loadUsers();
+  }
+
+  async function removeMember(id: string) {
+    if (!confirm('Remove this team member?')) return;
+    await fetch('/api/team', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: id }),
+    });
+    loadUsers();
+  }
+
+  async function checkGoogleCalendar() {
+    try {
+      const res = await fetch('/api/calendar/google/status');
+      const data = await res.json();
+      setGoogleConnected(data.connected);
+    } catch {
+      setGoogleConnected(false);
+    }
+  }
+
+  function connectGoogleCalendar() {
+    window.location.href = '/api/auth/google?redirect=/settings';
+  }
+
+  async function disconnectGoogleCalendar() {
+    if (!confirm('Disconnect Google Calendar?')) return;
+    await fetch('/api/auth/google/disconnect', { method: 'DELETE' });
+    setGoogleConnected(false);
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-8">
+      <div className="flex items-center gap-3">
+        <Settings className="h-6 w-6 text-emerald-500" />
+        <h1 className="text-xl font-semibold text-white">Settings</h1>
+      </div>
+
+      {message && (
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-4 py-3 text-emerald-400 text-sm">
+          {message}
+        </div>
+      )}
+
+      {/* Ollama Connection */}
+      <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
+        <div className="flex items-center gap-3">
+          <Cpu className="h-5 w-5 text-emerald-500" />
+          <h2 className="text-lg font-medium text-white">AI Connection (Ollama)</h2>
+          <div className={`ml-auto flex items-center gap-1.5 text-xs ${modelInfo?.connected ? 'text-emerald-400' : 'text-red-400'}`}>
+            <div className={`h-2 w-2 rounded-full ${modelInfo?.connected ? 'bg-emerald-400' : 'bg-red-400'}`} />
+            {modelInfo?.connected ? 'Connected' : 'Disconnected'}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Ollama URL</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={settings.ollamaUrl}
+                onChange={(e) => setSettings({ ...settings, ollamaUrl: e.target.value })}
+                className="flex-1 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+                placeholder="http://localhost:11434"
+              />
+              <a
+                href={settings.ollamaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-2 border border-[var(--border)] rounded-md text-gray-400 hover:text-white transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Model</label>
+            {modelInfo?.connected && modelInfo.models.length > 0 ? (
+              <select
+                value={settings.ollamaModel}
+                onChange={(e) => setSettings({ ...settings, ollamaModel: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+              >
+                {modelInfo.models.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={settings.ollamaModel}
+                onChange={(e) => setSettings({ ...settings, ollamaModel: e.target.value })}
+                className="w-full px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+                placeholder="kimi-k2.6:cloud"
+              />
+            )}
+          </div>
+
+          <button
+            onClick={saveSettings}
+            disabled={saving}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
+      </section>
+
+      {/* Google Calendar */}
+      <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
+        <div className="flex items-center gap-3">
+          <Calendar className="h-5 w-5 text-blue-500" />
+          <h2 className="text-lg font-medium text-white">Google Calendar</h2>
+          <div className={`ml-auto flex items-center gap-1.5 text-xs ${googleConnected ? 'text-emerald-400' : 'text-gray-500'}`}>
+            <div className={`h-2 w-2 rounded-full ${googleConnected ? 'bg-emerald-400' : 'bg-gray-600'}`} />
+            {googleConnected ? 'Connected' : 'Not connected'}
+          </div>
+        </div>
+
+        <p className="text-sm text-gray-400">
+          Connect your Google Calendar to see your events alongside your task board. Each team member connects their own Google account.
+        </p>
+
+        {googleConnected ? (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-emerald-400">Your Google Calendar is synced</span>
+            <button
+              onClick={disconnectGoogleCalendar}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-400 border border-red-500/30 rounded-md hover:bg-red-500/10 transition-colors"
+            >
+              <Unlink className="h-3.5 w-3.5" />
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={connectGoogleCalendar}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Connect Google Calendar
+          </button>
+        )}
+      </section>
+
+      {/* Team Members */}
+      <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
+        <div className="flex items-center gap-3">
+          <Users className="h-5 w-5 text-emerald-500" />
+          <h2 className="text-lg font-medium text-white">Team Members</h2>
+        </div>
+
+        <div className="space-y-2">
+          {users.map((user) => (
+            <div key={user.id} className="flex items-center gap-3 px-3 py-2.5 bg-[var(--bg-base)] border border-[var(--border)] rounded-md">
+              <div
+                className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium"
+                style={{ backgroundColor: `${user.color}22`, color: user.color }}
+              >
+                {getInitials(user.name)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-white truncate">{user.name}</p>
+                <p className="text-xs text-gray-500">{user.role}</p>
+              </div>
+              {user.role !== 'admin' && (
+                <button
+                  onClick={() => removeMember(user.id)}
+                  className="p-1.5 text-gray-600 hover:text-red-400 transition-colors rounded"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="border-t border-[var(--border)] pt-4">
+          <p className="text-sm text-gray-400 mb-2">Add team member</p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={newMemberName}
+              onChange={(e) => setNewMemberName(e.target.value)}
+              placeholder="Name"
+              className="flex-1 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+            />
+            <input
+              type="password"
+              value={newMemberPin}
+              onChange={(e) => setNewMemberPin(e.target.value)}
+              placeholder="PIN"
+              className="w-full sm:w-24 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+            />
+            <button
+              onClick={addMember}
+              disabled={!newMemberName.trim() || !newMemberPin.trim()}
+              className="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Data */}
+      <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
+        <h2 className="text-lg font-medium text-white">Data</h2>
+        <div className="flex gap-3">
+          <a
+            href="/api/boards"
+            target="_blank"
+            className="px-4 py-2 border border-[var(--border)] rounded-md text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            View API Data
+          </a>
+          <a
+            href={typeof window !== 'undefined' ? window.location.origin : '/'}
+            target="_blank"
+            className="px-4 py-2 border border-[var(--border)] rounded-md text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Open in New Tab
+          </a>
+        </div>
+      </section>
+    </div>
+  );
+}
