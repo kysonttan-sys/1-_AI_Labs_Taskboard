@@ -115,8 +115,13 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
 
   useEffect(() => {
     const socket = io({
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 60000,
+      path: '/socket.io/',
     });
 
     socketRef.current = socket;
