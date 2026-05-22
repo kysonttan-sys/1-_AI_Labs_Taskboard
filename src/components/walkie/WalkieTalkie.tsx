@@ -11,7 +11,7 @@ interface WalkieTalkieProps {
   userName: string;
 }
 
-export default function WalkieTalkie({ boardId, userId, userName }: WalkieTalkieProps) {
+export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
   const socketRef = useRef<Socket | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
@@ -169,7 +169,6 @@ export default function WalkieTalkie({ boardId, userId, userName }: WalkieTalkie
       'offer',
       async ({
         senderId,
-        senderName,
         offer,
       }: {
         senderId: string;
