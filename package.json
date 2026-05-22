@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0 -p 3000",
+    "dev": "tsx server.ts",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 3000",
+    "start": "tsx server.ts --production",
     "lint": "next lint",
     "seed": "npx tsx prisma/seed.ts",
     "db:migrate": "npx prisma migrate dev",
@@ -31,6 +31,8 @@
     "react-dom": "^18",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
   },
