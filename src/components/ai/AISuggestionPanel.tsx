@@ -107,14 +107,14 @@ export default function AISuggestionPanel() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-emerald-500" />
+        <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-[var(--accent)]" />
           AI Suggestions
         </h3>
         <button
           onClick={fetchSuggestions}
           disabled={isLoading}
-          className="px-3 py-1.5 text-xs font-medium bg-emerald-500 hover:bg-emerald-400 text-white rounded-md transition-colors disabled:opacity-50 flex items-center gap-1.5"
+          className="px-3 py-1.5 text-xs font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] rounded-md transition-colors disabled:opacity-50 flex items-center gap-1.5"
         >
           {isLoading ? (
             <>
@@ -138,8 +138,8 @@ export default function AISuggestionPanel() {
 
       {suggestions.length === 0 && !isLoading && !error && (
         <div className="text-center py-8">
-          <Sparkles className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-          <p className="text-sm text-gray-500">
+          <Sparkles className="h-8 w-8 text-[var(--text-tertiary)] mx-auto mb-2" />
+          <p className="text-sm text-[var(--text-tertiary)]">
             Click &ldquo;Get Suggestions&rdquo; to analyze your board
           </p>
         </div>
@@ -152,28 +152,28 @@ export default function AISuggestionPanel() {
           return (
             <div
               key={i}
-              className={`p-3 rounded-lg bg-[var(--bg-base)] border ${getBorderColor(suggestion.type)} space-y-1.5`}
+              className={`p-3 rounded-lg bg-[var(--bg-surface)] border ${getBorderColor(suggestion.type)} space-y-1.5`}
             >
               <div className="flex items-start gap-2">
                 {getIcon(suggestion.type)}
                 <div className="flex-1 min-w-0">
                   {suggestion.type === 'assignment' && (
                     <>
-                      <p className="text-xs font-medium text-gray-200">{suggestion.cardTitle}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">
+                      <p className="text-xs font-medium text-[var(--text-primary)]">{suggestion.cardTitle}</p>
+                      <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
                         Suggested assignee: <span className="text-blue-400">{suggestion.suggestedAssignee}</span>
                       </p>
-                      <p className="text-[11px] text-gray-500 mt-0.5">{suggestion.reason}</p>
+                      <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{suggestion.reason}</p>
                       {!isApplied && (
                         <button
                           onClick={() => handleApplyAssignment(suggestion, i)}
-                          className="mt-1.5 px-2 py-1 text-[10px] font-medium bg-emerald-500 hover:bg-emerald-400 text-white rounded transition-colors"
+                          className="mt-1.5 px-2 py-1 text-[10px] font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] rounded transition-colors"
                         >
                           Apply
                         </button>
                       )}
                       {isApplied && (
-                        <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-emerald-400">
+                        <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-[var(--accent)]">
                           <Check className="h-3 w-3" /> Applied
                         </span>
                       )}
@@ -181,22 +181,22 @@ export default function AISuggestionPanel() {
                   )}
                   {suggestion.type === 'duration' && (
                     <>
-                      <p className="text-xs font-medium text-gray-200">{suggestion.cardTitle}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">
+                      <p className="text-xs font-medium text-[var(--text-primary)]">{suggestion.cardTitle}</p>
+                      <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
                         Estimated: <span className="text-amber-400">{suggestion.estimatedDays} days</span>
                       </p>
-                      <p className="text-[11px] text-gray-500 mt-0.5">{suggestion.reason}</p>
-                      <span className="text-[10px] text-gray-600">
+                      <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{suggestion.reason}</p>
+                      <span className="text-[10px] text-[var(--text-tertiary)]">
                         Confidence: {getConfidenceLabel(suggestion.confidence)}
                       </span>
                     </>
                   )}
                   {suggestion.type === 'bottleneck' && (
                     <>
-                      <p className="text-xs font-medium text-gray-200">{suggestion.description}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">Suggestion: {suggestion.suggestion}</p>
+                      <p className="text-xs font-medium text-[var(--text-primary)]">{suggestion.description}</p>
+                      <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">Suggestion: {suggestion.suggestion}</p>
                       {suggestion.affectedCards.length > 0 && (
-                        <p className="text-[10px] text-gray-500 mt-0.5">
+                        <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
                           Affected: {suggestion.affectedCards.join(', ')}
                         </p>
                       )}

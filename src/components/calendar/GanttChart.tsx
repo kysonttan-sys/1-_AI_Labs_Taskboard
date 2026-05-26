@@ -22,7 +22,7 @@ const ZOOM_WIDTHS: Record<ZoomLevel, number> = {
 const PRIORITY_COLORS: Record<string, { dot: string; bg: string; bar: string }> = {
   urgent: { dot: '#ef4444', bg: 'bg-red-500/20', bar: 'bg-red-500' },
   high: { dot: '#f97316', bg: 'bg-orange-500/20', bar: 'bg-orange-500' },
-  medium: { dot: '#10b981', bg: 'bg-emerald-500/20', bar: 'bg-emerald-500' },
+  medium: { dot: '#10b981', bg: 'bg-[var(--accent)]/20', bar: 'bg-[var(--accent)]' },
   low: { dot: '#6b7280', bg: 'bg-gray-500/20', bar: 'bg-gray-500' },
 };
 
@@ -119,10 +119,10 @@ export default function GanttChart() {
   if (sortedCards.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center gap-3">
-        <div className="h-12 w-12 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center">
+        <div className="h-12 w-12 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center">
           <span className="text-2xl">📊</span>
         </div>
-        <p className="text-gray-500 text-sm">
+        <p className="text-[var(--text-tertiary)] text-sm">
           No tasks with start and due dates found.
           <br />
           Add dates to your tasks to see them on the Gantt chart.
@@ -135,15 +135,15 @@ export default function GanttChart() {
     <div className="flex flex-col h-full min-h-0">
       {/* Zoom controls */}
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs text-gray-500 mr-1">Zoom:</span>
+        <span className="text-xs text-[var(--text-tertiary)] mr-1">Zoom:</span>
         {(['day', 'week', 'month'] as ZoomLevel[]).map((z) => (
           <button
             key={z}
             onClick={() => setZoom(z)}
             className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors
               ${zoom === z
-                ? 'bg-emerald-500 text-white'
-                : 'bg-[var(--bg-card)] text-gray-400 hover:text-gray-200 border border-[var(--border)]'
+                ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                : 'bg-[var(--bg-elevated)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)]'
               }`}
           >
             {z.charAt(0).toUpperCase() + z.slice(1)}
@@ -154,9 +154,9 @@ export default function GanttChart() {
       {/* Desktop Gantt chart */}
       <div className="hidden sm:flex flex-1 min-h-0 overflow-hidden border border-[var(--border)] rounded-lg">
         {/* Left panel: task list */}
-        <div className="w-56 shrink-0 bg-[var(--bg-card)] border-r border-[var(--border)] flex flex-col">
+        <div className="w-56 shrink-0 bg-[var(--bg-elevated)] border-r border-[var(--border)] flex flex-col">
           <div className="h-8 border-b border-[var(--border)] flex items-center px-3">
-            <span className="text-xs font-medium text-gray-500">Task</span>
+            <span className="text-xs font-medium text-[var(--text-tertiary)]">Task</span>
           </div>
           <div className="flex-1 overflow-y-auto">
             {sortedCards.map((card) => {
@@ -171,13 +171,13 @@ export default function GanttChart() {
                     style={{ backgroundColor: colors.dot }}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-gray-200 truncate">{card.title}</p>
+                    <p className="text-xs text-[var(--text-secondary)] truncate">{card.title}</p>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       {card.assignees && card.assignees.length > 0 && (
-                        <span className="text-[10px] text-gray-500">{card.assignees.map((a: { user: { name: string } }) => a.user.name).join(', ')}</span>
+                        <span className="text-[10px] text-[var(--text-tertiary)]">{card.assignees.map((a: { user: { name: string } }) => a.user.name).join(', ')}</span>
                       )}
                       {card.status && (
-                        <span className="text-[10px] text-gray-600">{card.status}</span>
+                        <span className="text-[10px] text-[var(--text-tertiary)]">{card.status}</span>
                       )}
                     </div>
                   </div>
@@ -190,7 +190,7 @@ export default function GanttChart() {
         {/* Right panel: timeline */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Date header */}
-          <div className="h-8 shrink-0 overflow-hidden border-b border-[var(--border)] bg-[var(--bg-card)]">
+          <div className="h-8 shrink-0 overflow-hidden border-b border-[var(--border)] bg-[var(--bg-elevated)]">
             <div
               className="flex relative"
               style={{ width: timelineWidth }}
@@ -209,7 +209,7 @@ export default function GanttChart() {
                 return (
                   <div
                     key={`month-${i}`}
-                    className="absolute top-0 left-0 flex items-center h-4 text-[10px] font-medium text-gray-400"
+                    className="absolute top-0 left-0 flex items-center h-4 text-[10px] font-medium text-[var(--text-tertiary)]"
                     style={{
                       left: monthStart * dayWidth,
                       width,
@@ -225,7 +225,7 @@ export default function GanttChart() {
                   <div
                     key={i}
                     className={`flex items-center justify-center text-[10px] shrink-0
-                      ${isToday(h.date) ? 'text-emerald-400 font-bold' : 'text-gray-600'}`}
+                      ${isToday(h.date) ? 'text-[var(--accent)] font-bold' : 'text-[var(--text-tertiary)]'}`}
                     style={{ width: dayWidth }}
                   >
                     {showDayLabels ? h.label : (i % 7 === 0 ? h.label : '')}
@@ -253,10 +253,10 @@ export default function GanttChart() {
               {/* Today line */}
               {todayOffset >= 0 && todayOffset <= timelineWidth && (
                 <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-emerald-500 z-10"
+                  className="absolute top-0 bottom-0 w-0.5 bg-[var(--accent)] z-10"
                   style={{ left: todayOffset }}
                 >
-                  <div className="absolute -top-0 left-1/2 -translate-x-1/2 text-[9px] font-bold text-emerald-400 bg-[var(--bg-base)] px-1 rounded">
+                  <div className="absolute -top-0 left-1/2 -translate-x-1/2 text-[9px] font-bold text-[var(--accent)] bg-[var(--bg-base)] px-1 rounded">
                     Today
                   </div>
                 </div>
@@ -292,7 +292,7 @@ export default function GanttChart() {
                       />
                       {/* Label */}
                       {width > 60 && (
-                        <span className="relative z-10 text-[11px] text-white font-medium truncate px-2">
+                        <span className="relative z-10 text-[11px] text-[var(--text-primary)] font-medium truncate px-2">
                           {card.title}
                         </span>
                       )}
@@ -310,23 +310,23 @@ export default function GanttChart() {
         {sortedCards.map((card) => {
           const colors = PRIORITY_COLORS[card.priority] || PRIORITY_COLORS.low;
           return (
-            <div key={card.id} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-3">
+            <div key={card.id} className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-3">
               <div className="flex items-center gap-2 mb-1.5">
                 <div
                   className="w-2 h-2 rounded-full shrink-0"
                   style={{ backgroundColor: colors.dot }}
                 />
-                <span className="text-sm text-gray-200 truncate">{card.title}</span>
+                <span className="text-sm text-[var(--text-secondary)] truncate">{card.title}</span>
               </div>
               {card.startDate && card.dueDate && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-[var(--text-tertiary)]">
                   {format(new Date(card.startDate), 'MMM d')} – {format(new Date(card.dueDate), 'MMM d')}
                 </p>
               )}
               {card.progress > 0 && (
                 <div className="mt-2 h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    className="h-full rounded-full bg-[var(--accent)] transition-all"
                     style={{ width: `${card.progress}%` }}
                   />
                 </div>

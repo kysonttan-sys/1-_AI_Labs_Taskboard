@@ -255,16 +255,16 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-[var(--backdrop)] backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[85vh] overflow-y-auto bg-[var(--bg-card)] border border-[var(--border)] rounded-none sm:rounded-xl shadow-2xl sm:mx-4">
+      <div className="relative w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[85vh] overflow-y-auto bg-[var(--bg-elevated)] border border-[var(--border)] rounded-none sm:rounded-xl shadow-2xl sm:mx-4">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 sm:p-1 rounded-md text-gray-500 hover:text-gray-300 hover:bg-[var(--bg-card-hover)] transition-colors z-10"
+          className="absolute top-4 right-4 p-2 sm:p-1 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] transition-colors z-10"
         >
           <X className="h-5 w-5" />
         </button>
@@ -272,7 +272,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
         <div className="p-4 sm:p-6 space-y-5">
           {/* List name */}
           {currentList && (
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+            <p className="text-xs text-[var(--text-tertiary)] font-medium uppercase tracking-wide">
               in {currentList.title}
             </p>
           )}
@@ -291,12 +291,12 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                   setIsEditingTitle(false);
                 }
               }}
-              className="w-full text-xl font-semibold bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-white focus-ring"
+              className="w-full text-xl font-semibold bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-primary)] focus-ring"
             />
           ) : (
             <h2
               onClick={() => setIsEditingTitle(true)}
-              className="text-xl font-semibold text-white cursor-pointer hover:text-emerald-400 transition-colors"
+              className="text-xl font-semibold text-[var(--text-primary)] cursor-pointer hover:text-[var(--accent-hover)] transition-colors"
             >
               {card.title}
             </h2>
@@ -304,7 +304,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
 
           {/* Description */}
           <div>
-            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1 block">
+            <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-1 block">
               Description
             </label>
             <textarea
@@ -313,7 +313,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
               onBlur={commitDescription}
               placeholder="Add a description..."
               rows={3}
-              className="w-full bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-gray-200 placeholder:text-gray-600 focus-ring resize-none"
+              className="w-full bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus-ring resize-none"
             />
           </div>
 
@@ -321,13 +321,13 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Status */}
             <div>
-              <label className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1 block">
+              <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-1 block">
                 Status
               </label>
               <select
                 value={status}
                 onChange={(e) => handleStatusChange(e.target.value)}
-                className="w-full bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-gray-200 focus-ring appearance-none"
+                className="w-full bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] focus-ring appearance-none"
               >
                 {STATUS_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -339,13 +339,13 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
 
             {/* Priority */}
             <div>
-              <label className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1 block">
+              <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-1 block">
                 Priority
               </label>
               <select
                 value={priority}
                 onChange={(e) => handlePriorityChange(e.target.value)}
-                className="w-full bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-gray-200 focus-ring appearance-none"
+                className="w-full bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] focus-ring appearance-none"
               >
                 {PRIORITY_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -358,9 +358,9 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
 
           {/* Progress */}
           <div>
-            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1 flex items-center justify-between">
+            <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-1 flex items-center justify-between">
               <span>Progress</span>
-              <span className="text-gray-500">{progress}%</span>
+              <span className="text-[var(--text-tertiary)]">{progress}%</span>
             </label>
             <input
               type="range"
@@ -369,14 +369,14 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
               value={progress}
               onChange={(e) => handleProgressChange(Number(e.target.value))}
               onMouseUp={() => {}}
-              className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-emerald-500 bg-[var(--border)]"
+              className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[var(--accent)] bg-[var(--border)]"
             />
           </div>
 
           {/* Dates row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+              <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-1 flex items-center gap-1.5">
                 <Calendar className="h-3 w-3" />
                 Start Date
               </label>
@@ -385,12 +385,12 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                   type="date"
                   value={startDate}
                   onChange={(e) => handleStartDateChange(e.target.value)}
-                  className="w-full bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-gray-200 focus-ring cursor-pointer"
+                  className="w-full bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] focus-ring cursor-pointer"
                 />
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+              <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-1 flex items-center gap-1.5">
                 <Calendar className="h-3 w-3" />
                 Due Date
               </label>
@@ -399,7 +399,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                   type="date"
                   value={dueDate}
                   onChange={(e) => handleDueDateChange(e.target.value)}
-                  className="w-full bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-gray-200 focus-ring cursor-pointer"
+                  className="w-full bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] focus-ring cursor-pointer"
                 />
               </div>
             </div>
@@ -407,7 +407,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
 
           {/* Assignees */}
           <div>
-            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+            <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-1 flex items-center gap-1.5">
               <User className="h-3 w-3" />
               Assignees
             </label>
@@ -420,7 +420,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                     onClick={() => toggleAssignee(user.id)}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
                       isSelected
-                        ? 'ring-1 ring-emerald-500/50'
+                        ? 'ring-1 ring-[var(--accent)]/50'
                         : ''
                     }`}
                     style={{
@@ -443,14 +443,14 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                 );
               })}
               {users.length === 0 && (
-                <span className="text-xs text-gray-600">No team members</span>
+                <span className="text-xs text-[var(--text-tertiary)]">No team members</span>
               )}
             </div>
           </div>
 
           {/* Labels */}
           <div>
-            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-2 flex items-center gap-1.5">
               <Tag className="h-3 w-3" />
               Labels
             </label>
@@ -473,18 +473,18 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                 );
               })}
               {boardLabels.length === 0 && (
-                <span className="text-xs text-gray-600">No labels on this board</span>
+                <span className="text-xs text-[var(--text-tertiary)]">No labels on this board</span>
               )}
             </div>
           </div>
 
           {/* Checklist */}
           <div>
-            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-2 flex items-center gap-1.5">
               <CheckSquare className="h-3 w-3" />
               Checklist
               {checklist.length > 0 && (
-                <span className="text-gray-600">
+                <span className="text-[var(--text-tertiary)]">
                   {checkedCount}/{checklist.length}
                 </span>
               )}
@@ -502,13 +502,13 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                         type="checkbox"
                         checked={item.checked}
                         onChange={() => toggleCheckItem(item.id)}
-                        className="h-3.5 w-3.5 rounded border-gray-600 text-emerald-500 focus:ring-emerald-500/50 bg-[var(--bg-base)]"
+                        className="h-3.5 w-3.5 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]/40 bg-[var(--bg-surface)]"
                       />
                       <span
                         className={`text-sm ${
                           item.checked
-                            ? 'line-through text-gray-600'
-                            : 'text-gray-300'
+                            ? 'line-through text-[var(--text-tertiary)]'
+                            : 'text-[var(--text-secondary)]'
                         }`}
                       >
                         {item.text}
@@ -516,7 +516,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                     </label>
                     <button
                       onClick={() => deleteCheckItem(item.id)}
-                      className="p-0.5 rounded opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all shrink-0"
+                      className="p-0.5 rounded opacity-0 group-hover:opacity-100 text-[var(--text-tertiary)] hover:text-red-400 transition-all shrink-0"
                       title="Delete item"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -534,12 +534,12 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                   if (e.key === 'Enter') addCheckItem();
                 }}
                 placeholder="Add item..."
-                className="flex-1 bg-[var(--bg-base)] border border-[var(--border)] rounded-md px-2 py-1.5 text-sm text-gray-200 placeholder:text-gray-600 focus-ring"
+                className="flex-1 bg-[var(--bg-surface)] border border-[var(--border)] rounded-md px-2 py-1.5 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus-ring"
               />
               <button
                 onClick={addCheckItem}
                 disabled={!newCheckItem.trim()}
-                className="px-2.5 py-1.5 text-xs font-medium bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-emerald-500 text-white rounded-md transition-colors"
+                className="px-2.5 py-1.5 text-xs font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:hover:bg-[var(--accent)] text-[var(--text-primary)] rounded-md transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -548,14 +548,14 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
 
           {/* Comments */}
           <div>
-            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-2 flex items-center gap-1.5">
               <MessageSquare className="h-3 w-3" />
               Comments
             </label>
             {comments.length > 0 && (
               <div className="space-y-2 mb-3">
                 {comments.map((comment) => (
-                  <div key={comment.id} className="flex gap-2 px-2 py-1.5 rounded-md bg-[var(--bg-base)] group">
+                  <div key={comment.id} className="flex gap-2 px-2 py-1.5 rounded-md bg-[var(--bg-surface)] group">
                     <div
                       className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0"
                       style={{ backgroundColor: `${comment.author?.color || '#6366f1'}22`, color: comment.author?.color || '#6366f1' }}
@@ -563,14 +563,14 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                       {getInitials(comment.author?.name)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs text-gray-200 break-words">{comment.text}</p>
-                      <p className="text-[10px] text-gray-600 mt-0.5">
+                      <p className="text-xs text-[var(--text-secondary)] break-words">{comment.text}</p>
+                      <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
                         {comment.author?.name || 'Unknown'} &middot; {new Date(comment.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                     <button
                       onClick={() => deleteComment(comment.id)}
-                      className="p-0.5 rounded opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all shrink-0 self-start mt-0.5"
+                      className="p-0.5 rounded opacity-0 group-hover:opacity-100 text-[var(--text-tertiary)] hover:text-red-400 transition-all shrink-0 self-start mt-0.5"
                       title="Delete comment"
                     >
                       <XCircle className="h-3.5 w-3.5" />
@@ -600,7 +600,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                   }
                 }}
                 placeholder="Write a comment..."
-                className="flex-1 bg-[var(--bg-base)] border border-[var(--border)] rounded-md px-2 py-1.5 text-sm text-gray-200 placeholder:text-gray-600 focus-ring"
+                className="flex-1 bg-[var(--bg-surface)] border border-[var(--border)] rounded-md px-2 py-1.5 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus-ring"
               />
               <button
                 onClick={() => {
@@ -619,7 +619,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                     .catch(() => {});
                 }}
                 disabled={!newComment.trim()}
-                className="px-2.5 py-1.5 text-xs font-medium bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-emerald-500 text-white rounded-md transition-colors"
+                className="px-2.5 py-1.5 text-xs font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:hover:bg-[var(--accent)] text-[var(--text-primary)] rounded-md transition-colors"
               >
                 <MessageSquare className="h-3.5 w-3.5" />
               </button>
@@ -641,13 +641,13 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                 <span className="text-sm text-red-400">Are you sure?</span>
                 <button
                   onClick={handleDelete}
-                  className="px-3 py-1 text-xs font-medium bg-red-600 hover:bg-red-500 text-white rounded-md transition-colors"
+                  className="px-3 py-1 text-xs font-medium bg-red-600 hover:bg-red-500 text-[var(--text-primary)] rounded-md transition-colors"
                 >
                   Delete
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-3 py-1 text-xs font-medium text-gray-500 hover:text-gray-300 transition-colors"
+                  className="px-3 py-1 text-xs font-medium text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                 >
                   Cancel
                 </button>

@@ -6,20 +6,12 @@ import { CSS } from '@dnd-kit/utilities';
 import { Calendar, CheckSquare, MessageSquare, CheckCircle } from 'lucide-react';
 import type { Card } from '@/types';
 import { getInitials } from '@/lib/utils/initials';
+import { getPriorityConfig } from '@/lib/utils/theme';
 
 interface KanbanCardProps {
   card: Card;
   onClick: () => void;
 }
-
-const priorityConfig: Record<string, { border: string; bg: string; text: string; label: string }> = {
-  urgent: { border: '#ef4444', bg: '#2d1515', text: '#fca5a5', label: 'Urgent' },
-  high: { border: '#f97316', bg: '#2d1f12', text: '#fdba74', label: 'High' },
-  medium: { border: '#3b82f6', bg: '#141c2d', text: '#93c5fd', label: 'Medium' },
-  low: { border: '#6b7280', bg: '#1e1e20', text: '#9ca3af', label: 'Low' },
-};
-
-const doneConfig = { border: '#10b981', bg: '#0f2d1f', text: '#6ee7b7', label: 'Done' };
 
 export default function KanbanCard({ card, onClick }: KanbanCardProps) {
   const {
@@ -32,7 +24,7 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
   } = useSortable({ id: card.id });
 
   const isDone = card.status === 'done';
-  const config = isDone ? doneConfig : (priorityConfig[card.priority] || priorityConfig.medium);
+  const config = getPriorityConfig(card.priority, isDone);
   const checkedCount = card.checklist?.filter((c) => c.checked).length ?? 0;
   const totalCount = card.checklist?.length ?? 0;
 
@@ -62,8 +54,8 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
       {/* Done badge */}
       {isDone && (
         <div className="flex items-center gap-1 mb-1.5">
-          <CheckCircle className="h-3 w-3 text-emerald-400" />
-          <span className="text-[10px] font-medium text-emerald-400">Done</span>
+          <CheckCircle className="h-3 w-3 text-[var(--accent)]" />
+          <span className="text-[10px] font-medium text-[var(--accent)]">Done</span>
         </div>
       )}
 
@@ -86,12 +78,12 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
       )}
 
       {/* Title */}
-      <p className={`text-sm leading-snug ${isDone ? 'text-emerald-300 line-through' : 'text-gray-200'}`}>
+      <p className={`text-sm leading-snug ${isDone ? 'text-[var(--accent)] line-through opacity-70' : 'text-[var(--text-primary)]'}`}>
         {card.title}
       </p>
 
       {/* Meta row */}
-      <div className="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-gray-500">
+      <div className="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-[var(--text-tertiary)]">
         {!isDone && (
           <span
             className="px-1.5 py-0.5 rounded text-[10px] font-medium"
@@ -145,7 +137,7 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
               </div>
             ))}
             {card.assignees.length > 3 && (
-              <div className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-medium bg-[var(--bg-base)] text-gray-400 ring-1 ring-[var(--bg-card)]">
+              <div className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-medium bg-[var(--bg-surface)] text-[var(--text-tertiary)] ring-1 ring-[var(--border)]">
                 +{card.assignees.length - 3}
               </div>
             )}

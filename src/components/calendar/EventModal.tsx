@@ -121,11 +121,11 @@ export default function EventModal({ event, defaultDate, onClose, onSave, onDele
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-[var(--bg-card)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden sm:mx-4">
+      <div className="absolute inset-0 bg-[var(--backdrop)] backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden sm:mx-4">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-          <h2 className="text-sm font-medium text-white">{isEditing ? 'Edit Event' : 'New Event'}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-[var(--bg-base)] text-gray-500 hover:text-gray-300 transition-colors">
+          <h2 className="text-sm font-medium text-[var(--text-primary)]">{isEditing ? 'Edit Event' : 'New Event'}</h2>
+          <button onClick={onClose} className="p-1 rounded hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -138,7 +138,7 @@ export default function EventModal({ event, defaultDate, onClose, onSave, onDele
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Event title"
-              className="w-full px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring placeholder:text-gray-600"
+              className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring placeholder:text-[var(--text-tertiary)]"
               autoFocus
             />
           </div>
@@ -149,9 +149,9 @@ export default function EventModal({ event, defaultDate, onClose, onSave, onDele
               type="checkbox"
               checked={allDay}
               onChange={(e) => setAllDay(e.target.checked)}
-              className="h-4 w-4 rounded border-[var(--border)] bg-[var(--bg-base)] text-emerald-500 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-[var(--border)] bg-[var(--bg-surface)] text-[var(--accent)] focus:ring-[var(--accent)]"
             />
-            <span className="text-sm text-gray-300">All day</span>
+            <span className="text-sm text-[var(--text-secondary)]">All day</span>
           </label>
 
           {/* Start Date/Time */}
@@ -160,14 +160,14 @@ export default function EventModal({ event, defaultDate, onClose, onSave, onDele
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="flex-1 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+              className="flex-1 px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
             />
             {!allDay && (
               <input
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-28 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+                className="w-28 px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
               />
             )}
           </div>
@@ -179,14 +179,14 @@ export default function EventModal({ event, defaultDate, onClose, onSave, onDele
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               placeholder="End date"
-              className="flex-1 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring placeholder:text-gray-600"
+              className="flex-1 px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring placeholder:text-[var(--text-tertiary)]"
             />
             {!allDay && endDate && (
               <input
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-28 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+                className="w-28 px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
               />
             )}
           </div>
@@ -197,42 +197,42 @@ export default function EventModal({ event, defaultDate, onClose, onSave, onDele
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Description (optional)"
             rows={2}
-            className="w-full px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring placeholder:text-gray-600 resize-none"
+            className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring placeholder:text-[var(--text-tertiary)] resize-none"
           />
 
           {/* Visibility */}
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500 shrink-0">Visibility</span>
-            <div className="flex gap-1 bg-[var(--bg-base)] rounded-md p-0.5 border border-[var(--border)]">
+            <span className="text-xs text-[var(--text-tertiary)] shrink-0">Visibility</span>
+            <div className="flex gap-1 bg-[var(--bg-surface)] rounded-md p-0.5 border border-[var(--border)]">
               <button
                 type="button"
                 onClick={() => setVisibility('private')}
-                className={`px-2.5 py-1 text-xs rounded transition-colors ${visibility === 'private' ? 'bg-[var(--border)] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`px-2.5 py-1 text-xs rounded transition-colors ${visibility === 'private' ? 'bg-[var(--border)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}
               >
                 Private
               </button>
               <button
                 type="button"
                 onClick={() => setVisibility('team')}
-                className={`px-2.5 py-1 text-xs rounded transition-colors ${visibility === 'team' ? 'bg-[var(--border)] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`px-2.5 py-1 text-xs rounded transition-colors ${visibility === 'team' ? 'bg-[var(--border)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}
               >
                 Team
               </button>
             </div>
-            <span className="text-[10px] text-gray-600">
+            <span className="text-[10px] text-[var(--text-tertiary)]">
               {visibility === 'team' ? 'Visible to all team members' : 'Only you can see this'}
             </span>
           </div>
 
           {/* Color Picker */}
           <div>
-            <p className="text-xs text-gray-500 mb-2">Color</p>
+            <p className="text-xs text-[var(--text-tertiary)] mb-2">Color</p>
             <div className="flex gap-2">
               {EVENT_COLORS.map((c) => (
                 <button
                   key={c}
                   onClick={() => setColor(c)}
-                  className={`h-6 w-6 rounded-full transition-all ${color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-[var(--bg-card)] scale-110' : 'hover:scale-105'}`}
+                  className={`h-6 w-6 rounded-full transition-all ${color === c ? 'ring-2 ring-[var(--text-primary)] ring-offset-2 ring-offset-[var(--bg-elevated)] scale-110' : 'hover:scale-105'}`}
                   style={{ backgroundColor: c }}
                 />
               ))}
@@ -245,8 +245,8 @@ export default function EventModal({ event, defaultDate, onClose, onSave, onDele
               {showDeleteConfirm ? (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-red-400">Delete this event?</span>
-                  <button onClick={handleDelete} className="px-3 py-1 bg-red-500 hover:bg-red-400 text-white text-xs font-medium rounded-md transition-colors">Delete</button>
-                  <button onClick={() => setShowDeleteConfirm(false)} className="px-3 py-1 text-xs text-gray-400 hover:text-gray-200 transition-colors">Cancel</button>
+                  <button onClick={handleDelete} className="px-3 py-1 bg-red-500 hover:bg-red-400 text-[var(--text-primary)] text-xs font-medium rounded-md transition-colors">Delete</button>
+                  <button onClick={() => setShowDeleteConfirm(false)} className="px-3 py-1 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">Cancel</button>
                 </div>
               ) : (
                 <button
@@ -265,14 +265,14 @@ export default function EventModal({ event, defaultDate, onClose, onSave, onDele
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[var(--border)]">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+            className="px-3 py-1.5 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!title.trim() || !startDate || saving}
-            className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+            className="px-4 py-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] text-sm font-medium rounded-md transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving...' : isEditing ? 'Update' : 'Create'}
           </button>

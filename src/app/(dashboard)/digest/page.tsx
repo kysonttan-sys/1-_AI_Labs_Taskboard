@@ -49,13 +49,13 @@ export default function DigestPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <CalendarDays className="h-5 w-5 text-emerald-500" />
-          <h1 className="text-lg font-semibold text-white">Weekly Digest</h1>
+          <CalendarDays className="h-5 w-5 text-[var(--accent)]" />
+          <h1 className="text-lg font-semibold text-[var(--text-primary)]">Weekly Digest</h1>
         </div>
         <button
           onClick={generateDigest}
           disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] rounded-lg transition-colors disabled:opacity-50"
         >
           {isLoading ? (
             <>
@@ -79,14 +79,14 @@ export default function DigestPage() {
 
       {isLoading && !digest && (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 className="h-8 w-8 text-emerald-500 animate-spin" />
-          <p className="text-sm text-gray-500">Generating your weekly digest...</p>
+          <Loader2 className="h-8 w-8 text-[var(--accent)] animate-spin" />
+          <p className="text-sm text-[var(--text-tertiary)]">Generating your weekly digest...</p>
         </div>
       )}
 
       {digest && (
-        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6">
-          <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
+        <div className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-6">
+          <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)] mb-4">
             <CalendarDays className="h-3.5 w-3.5" />
             <span>
               {new Date(digest.startDate).toLocaleDateString('en-US', {
@@ -101,7 +101,7 @@ export default function DigestPage() {
               })}
             </span>
           </div>
-          <div className="prose prose-invert prose-sm max-w-none [&_code]:text-emerald-400 [&_a]:text-emerald-400 [&_h1]:text-white [&_h2]:text-white [&_h3]:text-white">
+          <div className="prose prose-invert prose-sm max-w-none [&_code]:text-[var(--accent)] [&_a]:text-[var(--accent)] [&_h1]:text-[var(--text-primary)] [&_h2]:text-[var(--text-primary)] [&_h3]:text-[var(--text-primary)]">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {digest.content}
             </ReactMarkdown>
@@ -111,10 +111,10 @@ export default function DigestPage() {
 
       {!digest && !isLoading && !error && (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Sparkles className="h-12 w-12 text-gray-600" />
+          <Sparkles className="h-12 w-12 text-[var(--text-tertiary)]" />
           <div className="text-center">
-            <p className="text-sm text-gray-400 font-medium">No digest yet</p>
-            <p className="text-xs text-gray-600 mt-1">
+            <p className="text-sm text-[var(--text-secondary)] font-medium">No digest yet</p>
+            <p className="text-xs text-[var(--text-tertiary)] mt-1">
               Generate a weekly summary of your board&apos;s activity and progress
             </p>
           </div>

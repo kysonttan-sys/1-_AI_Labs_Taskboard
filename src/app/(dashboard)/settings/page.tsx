@@ -118,43 +118,43 @@ export default function SettingsPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div className="flex items-center gap-3">
-        <Settings className="h-6 w-6 text-emerald-500" />
-        <h1 className="text-xl font-semibold text-white">Settings</h1>
+        <Settings className="h-6 w-6 text-[var(--accent)]" />
+        <h1 className="text-xl font-semibold text-[var(--text-primary)]">Settings</h1>
       </div>
 
       {message && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-4 py-3 text-emerald-400 text-sm">
+        <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-lg px-4 py-3 text-[var(--accent)] text-sm">
           {message}
         </div>
       )}
 
       {/* Ollama Connection */}
-      <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
+      <section className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
         <div className="flex items-center gap-3">
-          <Cpu className="h-5 w-5 text-emerald-500" />
-          <h2 className="text-lg font-medium text-white">AI Connection (Ollama)</h2>
-          <div className={`ml-auto flex items-center gap-1.5 text-xs ${modelInfo?.connected ? 'text-emerald-400' : 'text-red-400'}`}>
-            <div className={`h-2 w-2 rounded-full ${modelInfo?.connected ? 'bg-emerald-400' : 'bg-red-400'}`} />
+          <Cpu className="h-5 w-5 text-[var(--accent)]" />
+          <h2 className="text-lg font-medium text-[var(--text-primary)]">AI Connection (Ollama)</h2>
+          <div className={`ml-auto flex items-center gap-1.5 text-xs ${modelInfo?.connected ? 'text-[var(--accent)]' : 'text-red-400'}`}>
+            <div className={`h-2 w-2 rounded-full ${modelInfo?.connected ? 'bg-[var(--accent)]' : 'bg-red-400'}`} />
             {modelInfo?.connected ? 'Connected' : 'Disconnected'}
           </div>
         </div>
 
         <div className="space-y-3">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Ollama URL</label>
+            <label className="block text-sm text-[var(--text-tertiary)] mb-1">Ollama URL</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={settings.ollamaUrl}
                 onChange={(e) => setSettings({ ...settings, ollamaUrl: e.target.value })}
-                className="flex-1 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+                className="flex-1 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
                 placeholder="http://localhost:11434"
               />
               <a
                 href={settings.ollamaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-2 border border-[var(--border)] rounded-md text-gray-400 hover:text-white transition-colors"
+                className="px-3 py-2 border border-[var(--border)] rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
               >
                 <ExternalLink className="h-4 w-4" />
               </a>
@@ -162,12 +162,12 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Model</label>
+            <label className="block text-sm text-[var(--text-tertiary)] mb-1">Model</label>
             {modelInfo?.connected && modelInfo.models.length > 0 ? (
               <select
                 value={settings.ollamaModel}
                 onChange={(e) => setSettings({ ...settings, ollamaModel: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+                className="w-full px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
               >
                 {modelInfo.models.map((m) => (
                   <option key={m} value={m}>{m}</option>
@@ -178,7 +178,7 @@ export default function SettingsPage() {
                 type="text"
                 value={settings.ollamaModel}
                 onChange={(e) => setSettings({ ...settings, ollamaModel: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+                className="w-full px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
                 placeholder="kimi-k2.6:cloud"
               />
             )}
@@ -187,7 +187,7 @@ export default function SettingsPage() {
           <button
             onClick={saveSettings}
             disabled={saving}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] text-sm font-medium rounded-md transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Settings'}
           </button>
@@ -195,23 +195,23 @@ export default function SettingsPage() {
       </section>
 
       {/* Google Calendar */}
-      <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
+      <section className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
         <div className="flex items-center gap-3">
           <Calendar className="h-5 w-5 text-blue-500" />
-          <h2 className="text-lg font-medium text-white">Google Calendar</h2>
-          <div className={`ml-auto flex items-center gap-1.5 text-xs ${googleConnected ? 'text-emerald-400' : 'text-gray-500'}`}>
-            <div className={`h-2 w-2 rounded-full ${googleConnected ? 'bg-emerald-400' : 'bg-gray-600'}`} />
+          <h2 className="text-lg font-medium text-[var(--text-primary)]">Google Calendar</h2>
+          <div className={`ml-auto flex items-center gap-1.5 text-xs ${googleConnected ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}`}>
+            <div className={`h-2 w-2 rounded-full ${googleConnected ? 'bg-[var(--accent)]' : 'bg-[var(--text-tertiary)]'}`} />
             {googleConnected ? 'Connected' : 'Not connected'}
           </div>
         </div>
 
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-[var(--text-tertiary)]">
           Connect your Google Calendar to see your events alongside your task board. Each team member connects their own Google account.
         </p>
 
         {googleConnected ? (
           <div className="flex items-center gap-3">
-            <span className="text-sm text-emerald-400">Your Google Calendar is synced</span>
+            <span className="text-sm text-[var(--accent)]">Your Google Calendar is synced</span>
             <button
               onClick={disconnectGoogleCalendar}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-400 border border-red-500/30 rounded-md hover:bg-red-500/10 transition-colors"
@@ -223,7 +223,7 @@ export default function SettingsPage() {
         ) : (
           <button
             onClick={connectGoogleCalendar}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-[var(--text-primary)] text-sm font-medium rounded-md transition-colors flex items-center gap-2"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -237,10 +237,10 @@ export default function SettingsPage() {
       </section>
 
       {/* Team Members */}
-      <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
+      <section className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
         <div className="flex items-center gap-3">
-          <Users className="h-5 w-5 text-emerald-500" />
-          <h2 className="text-lg font-medium text-white">Team Members</h2>
+          <Users className="h-5 w-5 text-[var(--accent)]" />
+          <h2 className="text-lg font-medium text-[var(--text-primary)]">Team Members</h2>
         </div>
 
         <div className="space-y-2">
@@ -253,13 +253,13 @@ export default function SettingsPage() {
                 {getInitials(user.name)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-white truncate">{user.name}</p>
-                <p className="text-xs text-gray-500">{user.role}</p>
+                <p className="text-sm text-[var(--text-primary)] truncate">{user.name}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">{user.role}</p>
               </div>
               {user.role !== 'admin' && (
                 <button
                   onClick={() => removeMember(user.id)}
-                  className="p-1.5 text-gray-600 hover:text-red-400 transition-colors rounded"
+                  className="p-1.5 text-[var(--text-tertiary)] hover:text-red-400 transition-colors rounded"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -269,26 +269,26 @@ export default function SettingsPage() {
         </div>
 
         <div className="border-t border-[var(--border)] pt-4">
-          <p className="text-sm text-gray-400 mb-2">Add team member</p>
+          <p className="text-sm text-[var(--text-tertiary)] mb-2">Add team member</p>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               value={newMemberName}
               onChange={(e) => setNewMemberName(e.target.value)}
               placeholder="Name"
-              className="flex-1 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+              className="flex-1 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
             />
             <input
               type="password"
               value={newMemberPin}
               onChange={(e) => setNewMemberPin(e.target.value)}
               placeholder="PIN"
-              className="w-full sm:w-24 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-white text-sm focus-ring"
+              className="w-full sm:w-24 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
             />
             <button
               onClick={addMember}
               disabled={!newMemberName.trim() || !newMemberPin.trim()}
-              className="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+              className="px-3 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] text-sm font-medium rounded-md transition-colors disabled:opacity-50"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -297,20 +297,20 @@ export default function SettingsPage() {
       </section>
 
       {/* Data */}
-      <section className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
-        <h2 className="text-lg font-medium text-white">Data</h2>
+      <section className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
+        <h2 className="text-lg font-medium text-[var(--text-primary)]">Data</h2>
         <div className="flex gap-3">
           <a
             href="/api/boards"
             target="_blank"
-            className="px-4 py-2 border border-[var(--border)] rounded-md text-sm text-gray-400 hover:text-white transition-colors"
+            className="px-4 py-2 border border-[var(--border)] rounded-md text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
           >
             View API Data
           </a>
           <a
             href={typeof window !== 'undefined' ? window.location.origin : '/'}
             target="_blank"
-            className="px-4 py-2 border border-[var(--border)] rounded-md text-sm text-gray-400 hover:text-white transition-colors"
+            className="px-4 py-2 border border-[var(--border)] rounded-md text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
           >
             Open in New Tab
           </a>

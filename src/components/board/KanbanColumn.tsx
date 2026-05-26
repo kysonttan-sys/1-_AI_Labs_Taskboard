@@ -77,7 +77,7 @@ function AddCardInput({
       <button
         onClick={() => setIsAdding(true)}
         className="w-full flex items-center gap-1 px-2 py-1.5 rounded-md text-sm
-          text-gray-600 hover:text-gray-400 hover:bg-[var(--bg-card-hover)] transition-colors"
+          text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
       >
         <Plus className="h-3.5 w-3.5" />
         <span>Add card</span>
@@ -99,19 +99,19 @@ function AddCardInput({
         onBlur={() => {
           if (!title.trim()) setIsAdding(false);
         }}
-        className="w-full px-2 py-1.5 text-sm bg-[var(--bg-base)] border border-[var(--border)]
-          rounded-md text-white placeholder:text-gray-600 focus-ring"
+        className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)]
+          rounded-md text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring"
       />
       <div className="flex gap-1.5">
         <button
           onClick={handleAdd}
-          className="px-2.5 py-1 text-xs font-medium bg-emerald-500 hover:bg-emerald-400 text-white rounded-md transition-colors"
+          className="px-2.5 py-1 text-xs font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] rounded-md transition-colors"
         >
           Add
         </button>
         <button
           onClick={() => setIsAdding(false)}
-          className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-gray-300 transition-colors"
+          className="px-2.5 py-1 text-xs font-medium text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
         >
           Cancel
         </button>
@@ -133,26 +133,26 @@ export default function KanbanColumn({ list, onAddCard, onCardClick }: KanbanCol
 
   return (
     <div
-      className="group flex flex-col w-[85vw] sm:w-72 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg"
+      className="group flex flex-col w-[85vw] sm:w-72 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-[var(--radius)]"
     >
       {/* Column header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--border)]">
         <div className="flex items-center gap-2 min-w-0">
-          <GripVertical className="h-3.5 w-3.5 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-grab" />
-          <h3 className="text-sm font-medium text-white truncate">{list.title}</h3>
-          <span className="text-xs text-gray-600 shrink-0">{list.cards.length}</span>
+          <GripVertical className="h-3.5 w-3.5 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-grab" />
+          <h3 className="text-sm font-medium text-[var(--text-primary)] truncate">{list.title}</h3>
+          <span className="text-xs text-[var(--text-tertiary)] shrink-0">{list.cards.length}</span>
         </div>
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-1 rounded hover:bg-[var(--bg-card-hover)] text-gray-600 hover:text-gray-400 transition-colors"
+            className="p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg shadow-xl py-1">
+              <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl py-1">
                 <button
                   onClick={() => {
                     const newTitle = prompt('Rename list:', list.title);
@@ -161,7 +161,7 @@ export default function KanbanColumn({ list, onAddCard, onCardClick }: KanbanCol
                     }
                     setMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[var(--bg-base)] transition-colors"
+                  className="w-full text-left px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors"
                 >
                   Rename
                 </button>
@@ -199,7 +199,7 @@ export default function KanbanColumn({ list, onAddCard, onCardClick }: KanbanCol
         {hiddenCount > 0 && !showAll && (
           <button
             onClick={() => setShowAll(true)}
-            className="flex items-center justify-center gap-1 w-full py-2 text-xs text-gray-500 hover:text-emerald-400 transition-colors"
+            className="flex items-center justify-center gap-1 w-full py-2 text-xs text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors"
           >
             <ChevronDown className="h-3.5 w-3.5" />
             {hiddenCount} more card{hiddenCount !== 1 ? 's' : ''}
@@ -208,7 +208,7 @@ export default function KanbanColumn({ list, onAddCard, onCardClick }: KanbanCol
         {showAll && sortedCards.length > VISIBLE_LIMIT && (
           <button
             onClick={() => setShowAll(false)}
-            className="flex items-center justify-center gap-1 w-full py-2 text-xs text-gray-500 hover:text-emerald-400 transition-colors"
+            className="flex items-center justify-center gap-1 w-full py-2 text-xs text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors"
           >
             Show less
           </button>

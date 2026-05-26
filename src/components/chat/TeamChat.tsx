@@ -152,7 +152,7 @@ export default function TeamChat({ boardId }: TeamChatProps) {
   const renderReplyReference = (replyTo?: { id: string; text: string; user: { id: string; name: string; color: string } | null } | null) => {
     if (!replyTo) return null;
     return (
-      <div className="text-[11px] text-gray-500 mb-0.5 flex items-center gap-1 bg-[var(--bg-base)] rounded px-1.5 py-0.5">
+      <div className="text-[11px] text-[var(--text-tertiary)] mb-0.5 flex items-center gap-1 bg-[var(--bg-base)] rounded px-1.5 py-0.5">
         <Reply className="h-3 w-3 shrink-0" />
         <span className="text-cyan-400 font-medium">{replyTo.user?.name || 'Unknown'}</span>
         <span className="truncate">{replyTo.text.substring(0, 50)}{replyTo.text.length > 50 ? '…' : ''}</span>
@@ -165,8 +165,8 @@ export default function TeamChat({ boardId }: TeamChatProps) {
       <button
         onClick={toggleOpen}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
-          text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10
-          border border-[var(--border)] hover:border-emerald-500/30 transition-colors"
+          text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10
+          border border-[var(--border)] hover:border-[var(--accent)]/30 transition-colors"
         title="Team Chat"
       >
         <AtSign className="h-4 w-4" />
@@ -179,17 +179,17 @@ export default function TeamChat({ boardId }: TeamChatProps) {
     <>
       {/* Mobile overlay */}
       <div className="sm:hidden fixed inset-0 z-40 flex flex-col">
-        <div className="absolute inset-0 bg-black/60" onClick={toggleOpen} />
-        <div className="relative flex flex-col h-full bg-[var(--bg-card)] border-l border-[var(--border)]">
+        <div className="absolute inset-0 bg-[var(--backdrop)]" onClick={toggleOpen} />
+        <div className="relative flex flex-col h-full bg-[var(--bg-elevated)] border-l border-[var(--border)]">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
             <div className="flex items-center gap-2">
               <AtSign className="h-4 w-4 text-cyan-400" />
-              <h3 className="text-sm font-medium text-white">Team Chat</h3>
+              <h3 className="text-sm font-medium text-[var(--text-primary)]">Team Chat</h3>
             </div>
             <button
               onClick={toggleOpen}
-              className="p-1 rounded hover:bg-[var(--bg-base)] text-gray-500 hover:text-gray-300 transition-colors"
+              className="p-1 rounded hover:bg-[var(--bg-base)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -200,7 +200,7 @@ export default function TeamChat({ boardId }: TeamChatProps) {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">
             {messages.length === 0 && (
-              <p className="text-sm text-gray-600 text-center py-8">No messages yet. Start the conversation!</p>
+              <p className="text-sm text-[var(--text-tertiary)] text-center py-8">No messages yet. Start the conversation!</p>
             )}
             {messages.map((msg) => (
               <div key={msg.id} className="flex gap-2">
@@ -215,18 +215,18 @@ export default function TeamChat({ boardId }: TeamChatProps) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xs font-medium text-gray-300">{msg.user?.name || 'Unknown'}</span>
-                    <span className="text-[10px] text-gray-600">{formatTime(msg.createdAt)}</span>
+                    <span className="text-xs font-medium text-[var(--text-secondary)]">{msg.user?.name || 'Unknown'}</span>
+                    <span className="text-[10px] text-[var(--text-tertiary)]">{formatTime(msg.createdAt)}</span>
                     <button
                       onClick={() => handleReply(msg)}
-                      className="p-0.5 text-gray-600 hover:text-cyan-400 transition-colors"
+                      className="p-0.5 text-[var(--text-tertiary)] hover:text-cyan-400 transition-colors"
                       title="Reply"
                     >
                       <Reply className="h-3 w-3" />
                     </button>
                   </div>
                   {renderReplyReference(msg.replyTo)}
-                  <p className="text-sm text-gray-200 break-words mt-0.5">{highlightMentions(msg.text)}</p>
+                  <p className="text-sm text-[var(--text-secondary)] break-words mt-0.5">{highlightMentions(msg.text)}</p>
                 </div>
               </div>
             ))}
@@ -239,10 +239,10 @@ export default function TeamChat({ boardId }: TeamChatProps) {
               <div className="flex items-center gap-2 mb-2 px-2 py-1.5 bg-[var(--bg-base)] rounded-lg text-xs">
                 <Reply className="h-3 w-3 text-cyan-400 shrink-0" />
                 <span className="text-cyan-400 font-medium">{replyingTo.userName}</span>
-                <span className="text-gray-500 truncate flex-1">{replyingTo.text.substring(0, 60)}{replyingTo.text.length > 60 ? '…' : ''}</span>
+                <span className="text-[var(--text-tertiary)] truncate flex-1">{replyingTo.text.substring(0, 60)}{replyingTo.text.length > 60 ? '…' : ''}</span>
                 <button
                   onClick={() => setReplyingTo(null)}
-                  className="text-gray-500 hover:text-gray-300 shrink-0"
+                  className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] shrink-0"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -255,7 +255,7 @@ export default function TeamChat({ boardId }: TeamChatProps) {
                     key={user.id}
                     onClick={() => insertMention(user)}
                     className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                      i === mentionIndex ? 'bg-[var(--bg-card)] text-white' : 'text-gray-300 hover:bg-[var(--bg-card)]'
+                      i === mentionIndex ? 'bg-[var(--bg-surface)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]'
                     }`}
                   >
                     <div
@@ -276,12 +276,12 @@ export default function TeamChat({ boardId }: TeamChatProps) {
                 onChange={(e) => handleInputChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Type @ to mention someone..."
-                className="flex-1 bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus-ring"
+                className="flex-1 bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring"
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-emerald-500 text-white rounded-lg transition-colors"
+                className="px-3 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:hover:bg-[var(--accent)] text-[var(--text-primary)] rounded-lg transition-colors"
               >
                 <Send className="h-4 w-4" />
               </button>
@@ -291,16 +291,16 @@ export default function TeamChat({ boardId }: TeamChatProps) {
       </div>
 
       {/* Desktop panel */}
-      <div className="hidden sm:flex w-72 shrink-0 flex-col bg-[var(--bg-card)] border border-[var(--border)] rounded-lg overflow-hidden">
+      <div className="hidden sm:flex w-72 shrink-0 flex-col bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
           <div className="flex items-center gap-2">
             <AtSign className="h-4 w-4 text-cyan-400" />
-            <h3 className="text-sm font-medium text-white">Team Chat</h3>
+            <h3 className="text-sm font-medium text-[var(--text-primary)]">Team Chat</h3>
           </div>
           <button
             onClick={toggleOpen}
-            className="p-1 rounded hover:bg-[var(--bg-base)] text-gray-500 hover:text-gray-300 transition-colors"
+            className="p-1 rounded hover:bg-[var(--bg-base)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -311,7 +311,7 @@ export default function TeamChat({ boardId }: TeamChatProps) {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">
           {messages.length === 0 && (
-            <p className="text-sm text-gray-600 text-center py-8">No messages yet. Start the conversation!</p>
+            <p className="text-sm text-[var(--text-tertiary)] text-center py-8">No messages yet. Start the conversation!</p>
           )}
           {messages.map((msg) => (
             <div key={msg.id} className="group flex gap-2">
@@ -326,18 +326,18 @@ export default function TeamChat({ boardId }: TeamChatProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-medium text-gray-300">{msg.user?.name || 'Unknown'}</span>
-                  <span className="text-[10px] text-gray-600">{formatTime(msg.createdAt)}</span>
+                  <span className="text-xs font-medium text-[var(--text-secondary)]">{msg.user?.name || 'Unknown'}</span>
+                  <span className="text-[10px] text-[var(--text-tertiary)]">{formatTime(msg.createdAt)}</span>
                   <button
                     onClick={() => handleReply(msg)}
-                    className="p-0.5 text-gray-600 hover:text-cyan-400 transition-colors"
+                    className="p-0.5 text-[var(--text-tertiary)] hover:text-cyan-400 transition-colors"
                     title="Reply"
                   >
                     <Reply className="h-3 w-3" />
                   </button>
                 </div>
                 {renderReplyReference(msg.replyTo)}
-                <p className="text-sm text-gray-200 break-words mt-0.5">{highlightMentions(msg.text)}</p>
+                <p className="text-sm text-[var(--text-secondary)] break-words mt-0.5">{highlightMentions(msg.text)}</p>
               </div>
             </div>
           ))}
@@ -350,10 +350,10 @@ export default function TeamChat({ boardId }: TeamChatProps) {
             <div className="flex items-center gap-2 mb-2 px-2 py-1.5 bg-[var(--bg-base)] rounded-lg text-xs">
               <Reply className="h-3 w-3 text-cyan-400 shrink-0" />
               <span className="text-cyan-400 font-medium">{replyingTo.userName}</span>
-              <span className="text-gray-500 truncate flex-1">{replyingTo.text.substring(0, 60)}{replyingTo.text.length > 60 ? '…' : ''}</span>
+              <span className="text-[var(--text-tertiary)] truncate flex-1">{replyingTo.text.substring(0, 60)}{replyingTo.text.length > 60 ? '…' : ''}</span>
               <button
                 onClick={() => setReplyingTo(null)}
-                className="text-gray-500 hover:text-gray-300 shrink-0"
+                className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] shrink-0"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -366,7 +366,7 @@ export default function TeamChat({ boardId }: TeamChatProps) {
                   key={user.id}
                   onClick={() => insertMention(user)}
                   className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                    i === mentionIndex ? 'bg-[var(--bg-card)] text-white' : 'text-gray-300 hover:bg-[var(--bg-card)]'
+                    i === mentionIndex ? 'bg-[var(--bg-surface)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]'
                   }`}
                 >
                   <div
@@ -387,12 +387,12 @@ export default function TeamChat({ boardId }: TeamChatProps) {
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type @ to mention..."
-              className="flex-1 bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus-ring"
+              className="flex-1 bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring"
             />
             <button
               onClick={handleSend}
               disabled={!input.trim()}
-              className="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-emerald-500 text-white rounded-lg transition-colors"
+              className="px-3 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:hover:bg-[var(--accent)] text-[var(--text-primary)] rounded-lg transition-colors"
             >
               <Send className="h-4 w-4" />
             </button>

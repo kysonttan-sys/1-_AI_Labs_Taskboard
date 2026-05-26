@@ -32,7 +32,7 @@ export default function DashboardLayout({
   if (!ready || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[var(--bg-base)]">
-        <div className="h-8 w-8 rounded-lg bg-emerald-500 animate-pulse" />
+        <div className="h-8 w-8 rounded-lg bg-[var(--accent)] animate-pulse" />
       </div>
     );
   }

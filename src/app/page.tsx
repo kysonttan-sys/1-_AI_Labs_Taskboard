@@ -36,8 +36,8 @@ export default function Home() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-[var(--bg-base)]">
       <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 rounded-lg bg-emerald-500 animate-pulse" />
-        <p className="text-sm text-gray-500">Loading...</p>
+        <div className="h-8 w-8 rounded-lg bg-[var(--accent)] animate-pulse" />
+        <p className="text-sm text-[var(--text-tertiary)]">Loading...</p>
       </div>
     </div>
   );

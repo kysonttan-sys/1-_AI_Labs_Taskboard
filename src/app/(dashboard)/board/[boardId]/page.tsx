@@ -47,10 +47,10 @@ export default function BoardPage() {
   if (!boardId) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center gap-3">
-        <div className="h-12 w-12 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center">
+        <div className="h-12 w-12 rounded-xl bg-[var(--bg-surface)] border border-[var(--border)] flex items-center justify-center">
           <span className="text-2xl">📋</span>
         </div>
-        <p className="text-gray-500 text-sm">Select a board to get started</p>
+        <p className="text-[var(--text-tertiary)] text-sm">Select a board to get started</p>
       </div>
     );
   }
@@ -58,7 +58,7 @@ export default function BoardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="h-6 w-6 rounded-md bg-emerald-500 animate-pulse" />
+        <div className="h-6 w-6 rounded-md bg-[var(--accent)] animate-pulse" />
       </div>
     );
   }
@@ -69,7 +69,7 @@ export default function BoardPage() {
         <KanbanBoard onCardClick={(card) => setSelectedCardId(card.id)} />
       </div>
       {showSuggestions && (
-        <div className="hidden sm:block w-80 shrink-0 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 overflow-y-auto">
+        <div className="hidden sm:block w-80 shrink-0 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-4 overflow-y-auto">
           <AISuggestionPanel />
         </div>
       )}
@@ -78,8 +78,8 @@ export default function BoardPage() {
           onClick={() => setShowSuggestions(!showSuggestions)}
           className={`shrink-0 self-start p-2 rounded-md border transition-colors ${
             showSuggestions
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-              : 'bg-[var(--bg-card)] border-[var(--border)] text-gray-500 hover:text-gray-300'
+              ? 'bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent)]'
+              : 'bg-[var(--bg-elevated)] border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
           }`}
           title="AI Suggestions"
         >
@@ -95,13 +95,13 @@ export default function BoardPage() {
       {/* Mobile suggestion overlay */}
       {showSuggestions && (
         <div className="sm:hidden fixed inset-0 z-40 flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSuggestions(false)} />
-          <div className="relative w-full max-h-[70vh] bg-[var(--bg-card)] border-t border-[var(--border)] rounded-t-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="absolute inset-0 bg-[var(--backdrop)] backdrop-blur-sm" onClick={() => setShowSuggestions(false)} />
+          <div className="relative w-full max-h-[70vh] bg-[var(--bg-elevated)] border-t border-[var(--border)] rounded-t-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
-              <h3 className="text-sm font-medium text-white">AI Suggestions</h3>
+              <h3 className="text-sm font-medium text-[var(--text-primary)]">AI Suggestions</h3>
               <button
                 onClick={() => setShowSuggestions(false)}
-                className="p-1 rounded hover:bg-[var(--bg-base)] text-gray-500 hover:text-gray-300 transition-colors"
+                className="p-1 rounded hover:bg-[var(--bg-base)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>

@@ -183,7 +183,7 @@ export default function CalendarMonthView() {
           {weekDays.map((day) => (
             <div
               key={day}
-              className="py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+              className="py-2 text-center text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider"
             >
               <span className="hidden sm:inline">{day}</span>
               <span className="sm:hidden">{day.charAt(0)}</span>
@@ -210,15 +210,15 @@ export default function CalendarMonthView() {
                   setPanelOpen(true);
                 }}
                 className={`border border-[var(--border)] p-0.5 sm:p-1.5 cursor-pointer transition-colors
-                  ${inMonth ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-base)]'}
-                  ${isSelected ? 'ring-1 ring-emerald-500' : ''}
+                  ${inMonth ? 'bg-[var(--bg-elevated)]' : 'bg-[var(--bg-surface)]'}
+                  ${isSelected ? 'ring-1 ring-[var(--accent)]' : ''}
                   hover:bg-[var(--bg-card-hover,#222226)]`}
               >
                 <span
                   className={`text-[10px] sm:text-xs font-medium inline-flex items-center justify-center h-5 sm:h-6 w-5 sm:w-6 rounded-full
-                    ${today ? 'bg-emerald-500 text-white' : ''}
-                    ${!today && inMonth ? 'text-gray-300' : ''}
-                    ${!inMonth ? 'text-gray-600' : ''}`}
+                    ${today ? 'bg-[var(--accent)] text-[var(--text-primary)]' : ''}
+                    ${!today && inMonth ? 'text-[var(--text-secondary)]' : ''}
+                    ${!inMonth ? 'text-[var(--text-tertiary)]' : ''}`}
                 >
                   {format(day, 'd')}
                 </span>
@@ -232,7 +232,7 @@ export default function CalendarMonthView() {
                         card.priority === 'urgent' ? 'bg-red-500/20 text-red-300' :
                         card.priority === 'high' ? 'bg-orange-500/20 text-orange-300' :
                         card.priority === 'medium' ? 'bg-blue-500/20 text-blue-300' :
-                        'bg-gray-500/20 text-gray-400'
+                        'bg-gray-500/20 text-[var(--text-tertiary)]'
                       }`}
                       title={card.title}
                     >
@@ -259,7 +259,7 @@ export default function CalendarMonthView() {
                     </div>
                   ))}
                   {((dayCards.length + dayLocalEvents.length + dayGoogleEvents.length) > 8) && (
-                    <span className="text-[9px] text-gray-500">
+                    <span className="text-[9px] text-[var(--text-tertiary)]">
                       +{dayCards.length + dayLocalEvents.length + dayGoogleEvents.length - 8} more
                     </span>
                   )}
@@ -272,9 +272,9 @@ export default function CalendarMonthView() {
 
       {/* Side panel for selected day */}
       {panelOpen && selectedDate && (
-        <div className="hidden sm:flex w-72 shrink-0 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg flex-col">
+        <div className="hidden sm:flex w-72 shrink-0 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-            <h3 className="text-sm font-medium text-white">
+            <h3 className="text-sm font-medium text-[var(--text-primary)]">
               {format(selectedDate, 'EEEE, MMM d')}
             </h3>
             <button
@@ -282,7 +282,7 @@ export default function CalendarMonthView() {
                 setPanelOpen(false);
                 setSelectedDate(null);
               }}
-              className="p-1 rounded hover:bg-[var(--bg-base)] text-gray-500 hover:text-gray-300 transition-colors"
+              className="p-1 rounded hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -292,14 +292,14 @@ export default function CalendarMonthView() {
             {/* Add event button */}
             <button
               onClick={() => setIsCreatingEvent(true)}
-              className="w-full flex items-center justify-center gap-1.5 py-2 mb-2 text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 py-2 mb-2 text-xs font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 border border-[var(--accent)]/20 rounded-lg transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
               Add event
             </button>
 
             {!hasSelectedContent ? (
-              <p className="text-xs text-gray-500 text-center py-4">
+              <p className="text-xs text-[var(--text-tertiary)] text-center py-4">
                 No tasks or events on this day
               </p>
             ) : (
@@ -308,23 +308,23 @@ export default function CalendarMonthView() {
                 {selectedCards.map((card) => (
                   <div
                     key={card.id}
-                    className="p-2.5 rounded-md bg-[var(--bg-base)] border border-[var(--border)]"
+                    className="p-2.5 rounded-md bg-[var(--bg-surface)] border border-[var(--border)]"
                   >
                     <div className="flex items-start gap-2">
                       <span
-                        className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${PRIORITY_COLORS[card.priority] || 'bg-gray-500'}`}
+                        className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${PRIORITY_COLORS[card.priority] || 'bg-[var(--text-tertiary)]'}`}
                       />
                       <div className="min-w-0">
-                        <p className="text-sm text-gray-200 truncate">{card.title}</p>
+                        <p className="text-sm text-[var(--text-secondary)] truncate">{card.title}</p>
                         {card.assignees && card.assignees.length > 0 && (
-                          <p className="text-[11px] text-gray-500 mt-0.5">
+                          <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
                             {card.assignees.map((a: { user: { name: string } }) => a.user.name).join(', ')}
                           </p>
                         )}
                         {card.progress > 0 && (
                           <div className="mt-1.5 h-1 rounded-full bg-[var(--border)] overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-emerald-500 transition-all"
+                              className="h-full rounded-full bg-[var(--accent)] transition-all"
                               style={{ width: `${card.progress}%` }}
                             />
                           </div>
@@ -337,22 +337,22 @@ export default function CalendarMonthView() {
                 {/* Local events */}
                 {selectedLocalEvents.length > 0 && (
                   <div className="pt-2 border-t border-[var(--border)]">
-                    <p className="text-[10px] font-medium text-emerald-400 uppercase tracking-wide mb-2">Events</p>
+                    <p className="text-[10px] font-medium text-[var(--accent)] uppercase tracking-wide mb-2">Events</p>
                     {selectedLocalEvents.map((event) => (
                       <div
                         key={event.id}
                         onClick={() => { if (event.userId === currentUser?.id) setEditingEvent(event); }}
-                        className={`p-2.5 rounded-md bg-[var(--bg-base)] border border-transparent hover:border-[var(--border)] transition-colors mb-2 ${event.userId === currentUser?.id ? 'cursor-pointer' : 'cursor-default'}`}
+                        className={`p-2.5 rounded-md bg-[var(--bg-surface)] border border-transparent hover:border-[var(--border)] transition-colors mb-2 ${event.userId === currentUser?.id ? 'cursor-pointer' : 'cursor-default'}`}
                         style={{ borderLeftWidth: '3px', borderLeftColor: event.color }}
                       >
                         <div className="flex items-start gap-2">
                           <span className="mt-0.5 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: event.color }} />
                           <div className="min-w-0">
-                            <p className="text-sm text-gray-200 truncate">{event.title}</p>
-                            <p className="text-[11px] text-gray-500 mt-0.5">
+                            <p className="text-sm text-[var(--text-secondary)] truncate">{event.title}</p>
+                            <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
                               {event.allDay ? 'All day' : new Date(event.startDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                               {event.visibility === 'team' && event.user && event.userId !== currentUser?.id && (
-                                <span className="ml-1 text-gray-600">by {event.user.name}</span>
+                                <span className="ml-1 text-[var(--text-tertiary)]">by {event.user.name}</span>
                               )}
                             </p>
                           </div>
@@ -369,17 +369,17 @@ export default function CalendarMonthView() {
                     {selectedGoogleEvents.map((event) => (
                       <div
                         key={event.id}
-                        className="p-2.5 rounded-md bg-[var(--bg-base)] border border-cyan-500/20 mb-2"
+                        className="p-2.5 rounded-md bg-[var(--bg-surface)] border border-cyan-500/20 mb-2"
                       >
                         <div className="flex items-start gap-2">
                           <span className="mt-0.5 h-2 w-2 rounded-full shrink-0 bg-cyan-400" />
                           <div className="min-w-0">
-                            <p className="text-sm text-gray-200 truncate">{event.title}</p>
+                            <p className="text-sm text-[var(--text-secondary)] truncate">{event.title}</p>
                             <p className="text-[11px] text-cyan-400/70 mt-0.5">
                               {event.isAllDay ? 'All day' : `${new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
                             </p>
                             {event.location && (
-                              <p className="text-[10px] text-gray-500 mt-0.5 truncate">{event.location}</p>
+                              <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5 truncate">{event.location}</p>
                             )}
                           </div>
                         </div>
@@ -396,15 +396,15 @@ export default function CalendarMonthView() {
       {/* Mobile overlay for selected day */}
       {panelOpen && selectedDate && (
         <div className="fixed inset-0 z-50 sm:hidden flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setPanelOpen(false); setSelectedDate(null); }} />
-          <div className="relative w-full max-h-[70vh] bg-[var(--bg-card)] border-t border-[var(--border)] rounded-t-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="absolute inset-0 bg-[var(--backdrop)] backdrop-blur-sm" onClick={() => { setPanelOpen(false); setSelectedDate(null); }} />
+          <div className="relative w-full max-h-[70vh] bg-[var(--bg-elevated)] border-t border-[var(--border)] rounded-t-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
-              <h3 className="text-sm font-medium text-white">
+              <h3 className="text-sm font-medium text-[var(--text-primary)]">
                 {format(selectedDate, 'EEEE, MMM d')}
               </h3>
               <button
                 onClick={() => { setPanelOpen(false); setSelectedDate(null); }}
-                className="p-1 rounded hover:bg-[var(--bg-base)] text-gray-500 hover:text-gray-300 transition-colors"
+                className="p-1 rounded hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -413,14 +413,14 @@ export default function CalendarMonthView() {
               {/* Add event button */}
               <button
                 onClick={() => setIsCreatingEvent(true)}
-                className="w-full flex items-center justify-center gap-1.5 py-2 mb-2 text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 py-2 mb-2 text-xs font-medium text-[var(--accent)] hover:text-[var(--accent-hover)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 border border-[var(--accent)]/20 rounded-lg transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add event
               </button>
 
               {!hasSelectedContent ? (
-                <p className="text-xs text-gray-500 text-center py-4">
+                <p className="text-xs text-[var(--text-tertiary)] text-center py-4">
                   No tasks or events on this day
                 </p>
               ) : (
@@ -428,23 +428,23 @@ export default function CalendarMonthView() {
                   {selectedCards.map((card) => (
                     <div
                       key={card.id}
-                      className="p-2.5 rounded-md bg-[var(--bg-base)] border border-[var(--border)]"
+                      className="p-2.5 rounded-md bg-[var(--bg-surface)] border border-[var(--border)]"
                     >
                       <div className="flex items-start gap-2">
                         <span
-                          className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${PRIORITY_COLORS[card.priority] || 'bg-gray-500'}`}
+                          className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${PRIORITY_COLORS[card.priority] || 'bg-[var(--text-tertiary)]'}`}
                         />
                         <div className="min-w-0">
-                          <p className="text-sm text-gray-200 truncate">{card.title}</p>
+                          <p className="text-sm text-[var(--text-secondary)] truncate">{card.title}</p>
                           {card.assignees && card.assignees.length > 0 && (
-                            <p className="text-[11px] text-gray-500 mt-0.5">
+                            <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
                               {card.assignees.map((a: { user: { name: string } }) => a.user.name).join(', ')}
                             </p>
                           )}
                           {card.progress > 0 && (
                             <div className="mt-1.5 h-1 rounded-full bg-[var(--border)] overflow-hidden">
                               <div
-                                className="h-full rounded-full bg-emerald-500 transition-all"
+                                className="h-full rounded-full bg-[var(--accent)] transition-all"
                                 style={{ width: `${card.progress}%` }}
                               />
                             </div>
@@ -456,22 +456,22 @@ export default function CalendarMonthView() {
 
                   {selectedLocalEvents.length > 0 && (
                     <div className="pt-2 border-t border-[var(--border)]">
-                      <p className="text-[10px] font-medium text-emerald-400 uppercase tracking-wide mb-2">Events</p>
+                      <p className="text-[10px] font-medium text-[var(--accent)] uppercase tracking-wide mb-2">Events</p>
                       {selectedLocalEvents.map((event) => (
                         <div
                           key={event.id}
                           onClick={() => { if (event.userId === currentUser?.id) setEditingEvent(event); }}
-                          className={`p-2.5 rounded-md bg-[var(--bg-base)] border border-transparent hover:border-[var(--border)] transition-colors mb-2 ${event.userId === currentUser?.id ? 'cursor-pointer' : 'cursor-default'}`}
+                          className={`p-2.5 rounded-md bg-[var(--bg-surface)] border border-transparent hover:border-[var(--border)] transition-colors mb-2 ${event.userId === currentUser?.id ? 'cursor-pointer' : 'cursor-default'}`}
                           style={{ borderLeftWidth: '3px', borderLeftColor: event.color }}
                         >
                           <div className="flex items-start gap-2">
                             <span className="mt-0.5 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: event.color }} />
                             <div className="min-w-0">
-                              <p className="text-sm text-gray-200 truncate">{event.title}</p>
-                              <p className="text-[11px] text-gray-500 mt-0.5">
+                              <p className="text-sm text-[var(--text-secondary)] truncate">{event.title}</p>
+                              <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
                                 {event.allDay ? 'All day' : new Date(event.startDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                                 {event.visibility === 'team' && event.user && event.userId !== currentUser?.id && (
-                                  <span className="ml-1 text-gray-600">by {event.user.name}</span>
+                                  <span className="ml-1 text-[var(--text-tertiary)]">by {event.user.name}</span>
                                 )}
                               </p>
                             </div>
@@ -487,12 +487,12 @@ export default function CalendarMonthView() {
                       {selectedGoogleEvents.map((event) => (
                         <div
                           key={event.id}
-                          className="p-2.5 rounded-md bg-[var(--bg-base)] border border-cyan-500/20 mb-2"
+                          className="p-2.5 rounded-md bg-[var(--bg-surface)] border border-cyan-500/20 mb-2"
                         >
                           <div className="flex items-start gap-2">
                             <span className="mt-0.5 h-2 w-2 rounded-full shrink-0 bg-cyan-400" />
                             <div className="min-w-0">
-                              <p className="text-sm text-gray-200 truncate">{event.title}</p>
+                              <p className="text-sm text-[var(--text-secondary)] truncate">{event.title}</p>
                               <p className="text-[11px] text-cyan-400/70 mt-0.5">
                                 {event.isAllDay ? 'All day' : `${new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
                               </p>
