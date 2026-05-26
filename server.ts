@@ -59,6 +59,8 @@ app.prepare().then(() => {
       methods: ['GET', 'POST'],
     },
     transports: ['polling', 'websocket'],
+    pingInterval: 10000,
+    pingTimeout: 5000,
   });
 
   io.use((socket, next) => {

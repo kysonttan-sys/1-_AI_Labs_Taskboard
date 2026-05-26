@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Mic, Radio, AlertCircle, User } from 'lucide-react';
 import { useWalkieStore } from '@/features/walkie/walkieStore';
@@ -154,6 +154,12 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
     });
 
     socket.on('user-joined', (peer: { socketId: string; userId: string; userName: string }) => {
+      const currentPeers = useWalkieStore.getState().peers;
+      const oldPeer = currentPeers.find((p) => p.userId === peer.userId && p.socketId !== peer.socketId);
+      if (oldPeer) {
+        closePeerConnection(oldPeer.socketId);
+        removePeer(oldPeer.socketId);
+      }
       addPeer(peer);
       if (pttActiveRef.current && localStreamRef.current) {
         createPeerConnectionAndOffer(peer.socketId, localStreamRef.current);
@@ -387,6 +393,14 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
     };
   }, [startTalking, stopTalking]);
 
+  const uniquePeers = useMemo(() => {
+    const map = new Map<string, { socketId: string; userId: string; userName: string }>();
+    for (const peer of peers) {
+      map.set(peer.userId, peer);
+    }
+    return Array.from(map.values());
+  }, [peers]);
+
   const isBlocked = !isConnected || (!!currentSpeaker && currentSpeaker.userId !== userId) || permissionDenied;
   const isButtonDisabled = isBlocked && !isTransmitting;
 
@@ -399,7 +413,7 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
             {isConnected ? 'Connected' : 'Offline'}
           </span>
           <span className="text-gray-600">·</span>
-          <span className="text-gray-500">{peers.length} online</span>
+          <span className="text-gray-500">{uniquePeers.length} online</span>
         </div>
         {currentSpeaker && (
           <div className="flex items-center gap-1.5 text-amber-400 animate-pulse">
@@ -409,9 +423,9 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
         )}
       </div>
 
-      {peers.length > 0 && (
+      {uniquePeers.length > 0 && (
         <div className="flex items-center gap-1">
-          {peers.map((peer) => (
+          {uniquePeers.map((peer) => (
             <div
               key={peer.socketId}
               className="h-6 w-6 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[10px] text-gray-400"

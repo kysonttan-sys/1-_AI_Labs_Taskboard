@@ -33,7 +33,7 @@ export const useWalkieStore = create<WalkieState>((set) => ({
   setPeers: (peers) => set({ peers }),
   addPeer: (peer) =>
     set((s) => ({
-      peers: [...s.peers.filter((p) => p.socketId !== peer.socketId), peer],
+      peers: [...s.peers.filter((p) => p.userId !== peer.userId), peer],
     })),
   removePeer: (socketId) =>
     set((s) => ({ peers: s.peers.filter((p) => p.socketId !== socketId) })),
