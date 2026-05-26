@@ -103,13 +103,13 @@ export default function Sidebar() {
         <div className="flex items-center justify-between h-14 px-4 border-b border-[var(--border)] shrink-0">
           {!collapsed ? (
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="Logo" className="h-8 w-8 shrink-0 rounded" />
+              <img src="/logo.png" alt="Logo" className="h-8 w-8 shrink-0 rounded theme-logo" />
               <span className="font-semibold text-[var(--text-primary)] text-sm tracking-tight">
                 TaskBoard
               </span>
             </div>
           ) : (
-            <img src="/logo.png" alt="Logo" className="h-7 w-7 rounded mx-auto" />
+            <img src="/logo.png" alt="Logo" className="h-7 w-7 rounded mx-auto theme-logo" />
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}

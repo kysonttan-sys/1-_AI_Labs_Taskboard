@@ -38,7 +38,7 @@ export default function GanttChart() {
       : allCards;
     // Only cards with both dates
     return filtered.filter(
-      (c) => c.startDate && c.dueDate
+      (c) => c.startDate && c.dueDate && c.status !== 'done'
     );
   }, [lists, activeBoardId]);
 

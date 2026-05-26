@@ -15,6 +15,7 @@ import { X, Plus } from 'lucide-react';
 import { useCalendarStore } from '@/features/calendar/calendarStore';
 import { useBoardStore } from '@/features/board/boardStore';
 import { useAuthStore } from '@/features/auth/authStore';
+import { getPriorityConfig } from '@/lib/utils/theme';
 import EventModal from './EventModal';
 import type { CalendarEvent } from '@/types';
 
@@ -225,20 +226,19 @@ export default function CalendarMonthView() {
 
                 {/* Task & event labels */}
                 <div className="mt-1 space-y-0.5 overflow-hidden">
-                  {dayCards.slice(0, 5).map((card) => (
-                    <div
-                      key={card.id}
-                      className={`px-1 py-0.5 rounded text-[9px] leading-tight truncate ${
-                        card.priority === 'urgent' ? 'bg-red-500/20 text-red-300' :
-                        card.priority === 'high' ? 'bg-orange-500/20 text-orange-300' :
-                        card.priority === 'medium' ? 'bg-blue-500/20 text-blue-300' :
-                        'bg-gray-500/20 text-[var(--text-tertiary)]'
-                      }`}
-                      title={card.title}
-                    >
-                      {card.title}
-                    </div>
-                  ))}
+                  {dayCards.slice(0, 5).map((card) => {
+                    const cfg = getPriorityConfig(card.priority, card.status === 'done');
+                    return (
+                      <div
+                        key={card.id}
+                        className="px-1 py-0.5 rounded text-[9px] leading-tight truncate"
+                        style={{ backgroundColor: cfg.bg, color: cfg.text }}
+                        title={card.title}
+                      >
+                        {card.title}
+                      </div>
+                    );
+                  })}
                   {dayLocalEvents.slice(0, 2).map((event) => (
                     <div
                       key={event.id}

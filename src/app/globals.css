@@ -7,18 +7,18 @@
 /* ===== Light Theme (default) ===== */
 html[data-theme="light"],
 :root:not([data-theme="dark"]) {
-  --bg-base: #fafafa;
-  --bg-elevated: #ffffff;
-  --bg-surface: #f4f4f5;
-  --bg-hover: #e4e4e7;
-  --border: #e4e4e7;
-  --border-hover: #d4d4d8;
+  --bg-base: #f4f4f5;
+  --bg-elevated: #e8e8eb;
+  --bg-surface: #ffffff;
+  --bg-hover: #d4d4d8;
+  --border: #d4d4d8;
+  --border-hover: #a1a1aa;
   --accent: #5e6ad2;
   --accent-hover: #7b88e8;
   --accent-muted: rgba(94, 106, 210, 0.12);
   --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-tertiary: #a1a1aa;
+  --text-secondary: #27272a;
+  --text-tertiary: #52525b;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -45,6 +45,11 @@ html[data-theme="dark"] {
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
   --radius: 6px;
   --backdrop: rgba(0, 0, 0, 0.6);
+}
+
+/* Logo invert for light theme (white logo → black) */
+html[data-theme="light"] .theme-logo {
+  filter: brightness(0);
 }
 
 * {
