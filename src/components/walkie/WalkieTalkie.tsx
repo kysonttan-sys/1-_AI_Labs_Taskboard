@@ -100,6 +100,7 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
         };
 
         pc.onconnectionstatechange = () => {
+          console.log(`[Walkie] Sender PC state to ${targetId}:`, pc.connectionState);
           if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
             closePeerConnection(targetId);
           }
@@ -198,14 +199,23 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
           });
 
           pc.ontrack = (event) => {
-            const stream = event.streams[0];
+            let stream = event.streams[0];
+            if (!stream && event.track) {
+              stream = new MediaStream([event.track]);
+            }
+            if (!stream) return;
+
             let audioEl = audioElementsRef.current.get(senderId);
             if (!audioEl) {
               audioEl = new Audio();
               audioEl.autoplay = true;
+              audioEl.muted = false;
+              audioEl.volume = 1.0;
               audioElementsRef.current.set(senderId, audioEl);
             }
             audioEl.srcObject = stream;
+            audioEl.play().catch((e) => console.warn('Audio play failed:', e));
+            console.log('[Walkie] Remote audio track received from', senderId);
           };
 
           pc.onicecandidate = (event) => {
@@ -215,6 +225,7 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
           };
 
           pc.onconnectionstatechange = () => {
+            console.log(`[Walkie] Receiver PC state for ${senderId}:`, pc.connectionState);
             if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
               closePeerConnection(senderId);
             }
@@ -333,7 +344,9 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
       navigator.mediaDevices
         .getUserMedia({ audio: true })
         .then((stream) => {
+          console.log('[Walkie] Got local stream, tracks:', stream.getAudioTracks().length);
           localStreamRef.current = stream;
+          console.log('[Walkie] Creating offers to', peers.length, 'peers');
           peers.forEach((peer) => {
             createPeerConnectionAndOffer(peer.socketId, stream);
           });
