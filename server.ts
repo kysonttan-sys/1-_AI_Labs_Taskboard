@@ -42,16 +42,7 @@ interface RoomState {
 const roomStates = new Map<string, RoomState>();
 
 app.prepare().then(() => {
-  const httpServer = createServer();
-
-  const io = new Server(httpServer, {
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST'],
-    },
-  });
-
-  httpServer.on('request', async (req, res) => {
+  const httpServer = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url!, true);
       await handle(req, res, parsedUrl);
@@ -60,6 +51,14 @@ app.prepare().then(() => {
       res.statusCode = 500;
       res.end('Internal Server Error');
     }
+  });
+
+  const io = new Server(httpServer, {
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST'],
+    },
+    transports: ['polling', 'websocket'],
   });
 
   io.use((socket, next) => {
