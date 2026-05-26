@@ -16,6 +16,7 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const pendingCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
   const pttActiveRef = useRef(false);
 
   const {
@@ -45,6 +46,7 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
       audioEl.srcObject = null;
       audioElementsRef.current.delete(socketId);
     }
+    pendingCandidatesRef.current.delete(socketId);
   }, []);
 
   const cleanupAllConnections = useCallback(() => {
@@ -54,6 +56,7 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
       el.srcObject = null;
     });
     audioElementsRef.current.clear();
+    pendingCandidatesRef.current.clear();
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
@@ -71,6 +74,7 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
           audioEl.srcObject = null;
           audioElementsRef.current.delete(id);
         }
+        pendingCandidatesRef.current.delete(id);
       }
     });
   }, []);
@@ -211,6 +215,15 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
           };
 
           await pc.setRemoteDescription(offer);
+
+          const buffered = pendingCandidatesRef.current.get(senderId);
+          if (buffered) {
+            for (const c of buffered) {
+              try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch {}
+            }
+            pendingCandidatesRef.current.delete(senderId);
+          }
+
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
 
@@ -227,8 +240,15 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
       if (pc) {
         try {
           await pc.setRemoteDescription(answer);
-        } catch (err) {
-          console.error('Error setting remote description:', err);
+          const buffered = pendingCandidatesRef.current.get(senderId);
+          if (buffered) {
+            for (const c of buffered) {
+              try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch {}
+            }
+            pendingCandidatesRef.current.delete(senderId);
+          }
+        } catch {
+          // Ignore
         }
       }
     });
@@ -238,10 +258,16 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
       async ({ senderId, candidate }: { senderId: string; candidate: RTCIceCandidateInit }) => {
         const pc = peerConnectionsRef.current.get(senderId);
         if (pc) {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch (err) {
-            console.error('Error adding ICE candidate:', err);
+          if (pc.remoteDescription) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch {
+              // Ignore late/invalid candidates
+            }
+          } else {
+            const buffered = pendingCandidatesRef.current.get(senderId) || [];
+            buffered.push(candidate);
+            pendingCandidatesRef.current.set(senderId, buffered);
           }
         }
       }
@@ -337,6 +363,7 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
       el.srcObject = null;
     });
     audioElementsRef.current.clear();
+    pendingCandidatesRef.current.clear();
   }, [boardId, setTransmitting]);
 
   useEffect(() => {
