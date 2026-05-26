@@ -57,27 +57,27 @@ export default function AIChatSidebar() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed right-0 top-0 h-full w-full sm:w-[380px] bg-[var(--bg-card)] border-l border-[var(--border)] z-50 flex flex-col shadow-2xl">
+    <div className="fixed right-0 top-0 h-full w-full sm:w-[380px] bg-[var(--bg-elevated)] border-l border-[var(--border)] z-50 flex flex-col shadow-2xl">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-emerald-500" />
-          <h2 className="text-sm font-semibold text-white">AI Assistant</h2>
+          <Sparkles className="h-4 w-4 text-[var(--accent)]" />
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">AI Assistant</h2>
           <div
-            className={`h-2 w-2 rounded-full ${aiDisabled ? 'bg-gray-500' : ollamaConnected ? 'bg-emerald-500' : 'bg-red-500'}`}
+            className={`h-2 w-2 rounded-full ${aiDisabled ? 'bg-[var(--text-tertiary)]' : ollamaConnected ? 'bg-[var(--accent)]' : 'bg-red-500'}`}
             title={aiDisabled ? 'AI not available' : ollamaConnected ? 'Ollama connected' : 'Ollama disconnected'}
           />
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={clearMessages}
-            className="px-2 py-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            className="px-2 py-1 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
           >
             Clear
           </button>
           <button
             onClick={toggleOpen}
-            className="p-1 rounded hover:bg-[var(--bg-base)] text-gray-500 hover:text-gray-300 transition-colors"
+            className="p-1 rounded hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -87,15 +87,15 @@ export default function AIChatSidebar() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {aiDisabled && (
-          <div className="flex items-start gap-2 p-3 bg-[var(--bg-base)] border border-[var(--border)] rounded-lg">
-            <AlertCircle className="h-4 w-4 text-gray-500 shrink-0 mt-0.5" />
-            <p className="text-xs text-gray-500">AI features are not available in this deployment.</p>
+          <div className="flex items-start gap-2 p-3 bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg">
+            <AlertCircle className="h-4 w-4 text-[var(--text-tertiary)] shrink-0 mt-0.5" />
+            <p className="text-xs text-[var(--text-tertiary)]">AI features are not available in this deployment.</p>
           </div>
         )}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-3">
-            <Sparkles className="h-8 w-8 text-gray-600" />
-            <p className="text-sm text-gray-500">Ask me anything about your tasks</p>
+            <Sparkles className="h-8 w-8 text-[var(--text-tertiary)]" />
+            <p className="text-sm text-[var(--text-tertiary)]">Ask me anything about your tasks</p>
             <div className="flex flex-wrap gap-2 justify-center mt-2">
               {quickActions.map((action) => (
                 <button
@@ -103,7 +103,7 @@ export default function AIChatSidebar() {
                   onClick={() => {
                     setInput(action.message);
                   }}
-                  className="px-3 py-1.5 text-xs bg-[var(--bg-base)] border border-[var(--border)] rounded-full text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors"
+                  className="px-3 py-1.5 text-xs bg-[var(--bg-surface)] border border-[var(--border)] rounded-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--border-hover)] transition-colors"
                 >
                   {action.label}
                 </button>
@@ -120,12 +120,12 @@ export default function AIChatSidebar() {
             <div
               className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                 msg.role === 'user'
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-[var(--bg-base)] border border-[var(--border)] text-gray-200'
+                  ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                  : 'bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-secondary)]'
               }`}
             >
               {msg.role === 'assistant' ? (
-                <div className="prose prose-invert prose-sm max-w-none [&_code]:text-emerald-400 [&_a]:text-emerald-400">
+                <div className="prose prose-invert prose-sm max-w-none [&_code]:text-[var(--accent)] [&_a]:text-[var(--accent)]">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {msg.content}
                   </ReactMarkdown>
@@ -139,11 +139,11 @@ export default function AIChatSidebar() {
 
         {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (
           <div className="flex justify-start">
-            <div className="bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2">
+            <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2">
               <div className="flex gap-1">
-                <div className="h-2 w-2 rounded-full bg-gray-500 animate-bounce" />
-                <div className="h-2 w-2 rounded-full bg-gray-500 animate-bounce [animation-delay:150ms]" />
-                <div className="h-2 w-2 rounded-full bg-gray-500 animate-bounce [animation-delay:300ms]" />
+                <div className="h-2 w-2 rounded-full bg-[var(--text-tertiary)] animate-bounce" />
+                <div className="h-2 w-2 rounded-full bg-[var(--text-tertiary)] animate-bounce [animation-delay:150ms]" />
+                <div className="h-2 w-2 rounded-full bg-[var(--text-tertiary)] animate-bounce [animation-delay:300ms]" />
               </div>
             </div>
           </div>
@@ -170,12 +170,12 @@ export default function AIChatSidebar() {
             placeholder={aiDisabled ? 'AI features are not available' : ollamaConnected ? 'Ask about your tasks...' : 'Ollama is not connected'}
             disabled={isStreaming || !ollamaConnected || aiDisabled}
             rows={1}
-            className="flex-1 resize-none rounded-lg bg-[var(--bg-base)] border border-[var(--border)] px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
+            className="flex-1 resize-none rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] disabled:opacity-50"
           />
           <button
             onClick={handleSend}
             disabled={isStreaming || !input.trim() || !ollamaConnected || aiDisabled}
-            className="p-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:hover:bg-emerald-500 text-white transition-colors"
+            className="p-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:hover:bg-[var(--accent)] text-[var(--text-primary)] transition-colors"
           >
             <Send className="h-4 w-4" />
           </button>

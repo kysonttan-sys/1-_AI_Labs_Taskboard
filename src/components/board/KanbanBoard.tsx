@@ -33,9 +33,9 @@ function AddListInput({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
     return (
       <button
         onClick={() => setIsAdding(true)}
-        className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm
-          bg-[var(--bg-card)] border border-[var(--border)] border-dashed
-          text-gray-600 hover:text-gray-400 hover:border-[var(--border-hover)] transition-colors shrink-0"
+        className="flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius)] text-sm
+          bg-[var(--bg-elevated)] border border-[var(--border)] border-dashed
+          text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--border-hover)] transition-colors shrink-0"
       >
         <Plus className="h-4 w-4" />
         <span>Add list</span>
@@ -44,7 +44,7 @@ function AddListInput({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
   }
 
   return (
-    <div className="w-full sm:w-72 shrink-0 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-3 space-y-2">
+    <div className="w-full sm:w-72 shrink-0 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-[var(--radius)] p-3 space-y-2">
       <input
         autoFocus
         value={title}
@@ -57,19 +57,19 @@ function AddListInput({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
         onBlur={() => {
           if (!title.trim()) setIsAdding(false);
         }}
-        className="w-full px-2 py-1.5 text-sm bg-[var(--bg-base)] border border-[var(--border)]
-          rounded-md text-white placeholder:text-gray-600 focus-ring"
+        className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)]
+          rounded-md text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring"
       />
       <div className="flex gap-1.5">
         <button
           onClick={handleAdd}
-          className="px-2.5 py-1 text-xs font-medium bg-emerald-500 hover:bg-emerald-400 text-white rounded-md transition-colors"
+          className="px-2.5 py-1 text-xs font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] rounded-md transition-colors"
         >
           Add
         </button>
         <button
           onClick={() => setIsAdding(false)}
-          className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-gray-300 transition-colors"
+          className="px-2.5 py-1 text-xs font-medium text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
         >
           Cancel
         </button>

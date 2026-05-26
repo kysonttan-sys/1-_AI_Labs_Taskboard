@@ -84,11 +84,11 @@ export default function SetupPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="h-12 w-12 rounded-xl bg-emerald-500/15 flex items-center justify-center mb-4">
-            <Shield className="h-6 w-6 text-emerald-500" />
+          <div className="h-12 w-12 rounded-xl bg-[var(--accent-muted)] flex items-center justify-center mb-4">
+            <Shield className="h-6 w-6 text-[var(--accent)]" />
           </div>
-          <h1 className="text-xl font-semibold text-white">Welcome to TaskBoard</h1>
-          <p className="text-sm text-gray-500 mt-1">Create your admin account to get started</p>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Welcome to TaskBoard</h1>
+          <p className="text-sm text-[var(--text-tertiary)] mt-1">Create your admin account to get started</p>
         </div>
 
         {/* Card */}
@@ -103,7 +103,7 @@ export default function SetupPage() {
 
             {/* Name field */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="name" className="text-xs font-medium text-gray-400">
+              <label htmlFor="name" className="text-xs font-medium text-[var(--text-secondary)]">
                 Your Name
               </label>
               <input
@@ -113,14 +113,14 @@ export default function SetupPage() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your name"
                 autoFocus
-                className="w-full px-3 py-2 text-sm bg-[var(--bg-base)] border border-[var(--border)]
-                  rounded-md text-white placeholder:text-gray-600 focus-ring"
+                className="w-full px-3 py-2 text-sm bg-[var(--bg-surface)] border border-[var(--border)]
+                  rounded-md text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring"
               />
             </div>
 
             {/* PIN field */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="pin" className="text-xs font-medium text-gray-400">
+              <label htmlFor="pin" className="text-xs font-medium text-[var(--text-secondary)]">
                 PIN
               </label>
               <div className="relative">
@@ -131,13 +131,13 @@ export default function SetupPage() {
                   onChange={(e) => setPin(e.target.value)}
                   placeholder="Choose a PIN (4+ digits)"
                   maxLength={6}
-                  className="w-full px-3 py-2 pr-10 text-sm bg-[var(--bg-base)] border border-[var(--border)]
-                    rounded-md text-white placeholder:text-gray-600 focus-ring"
+                  className="w-full px-3 py-2 pr-10 text-sm bg-[var(--bg-surface)] border border-[var(--border)]
+                    rounded-md text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPin(!showPin)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600 hover:text-gray-400 transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                 >
                   {showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -146,7 +146,7 @@ export default function SetupPage() {
 
             {/* Confirm PIN field */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="confirmPin" className="text-xs font-medium text-gray-400">
+              <label htmlFor="confirmPin" className="text-xs font-medium text-[var(--text-secondary)]">
                 Confirm PIN
               </label>
               <input
@@ -156,8 +156,8 @@ export default function SetupPage() {
                 onChange={(e) => setConfirmPin(e.target.value)}
                 placeholder="Re-enter your PIN"
                 maxLength={6}
-                className="w-full px-3 py-2 text-sm bg-[var(--bg-base)] border border-[var(--border)]
-                  rounded-md text-white placeholder:text-gray-600 focus-ring"
+                className="w-full px-3 py-2 text-sm bg-[var(--bg-surface)] border border-[var(--border)]
+                  rounded-md text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring"
               />
             </div>
 
@@ -165,8 +165,8 @@ export default function SetupPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2 rounded-md bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50
-                text-sm font-medium text-white transition-colors disabled:cursor-not-allowed"
+              className="w-full py-2 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50
+                text-sm font-medium text-[var(--text-primary)] transition-colors disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Creating account...' : 'Create Account'}
             </button>
@@ -174,9 +174,9 @@ export default function SetupPage() {
         </div>
 
         {/* Login link */}
-        <p className="text-center text-xs text-gray-600 mt-4">
+        <p className="text-center text-xs text-[var(--text-tertiary)] mt-4">
           Already have an account?{' '}
-          <a href="/login" className="text-emerald-500 hover:text-emerald-400 transition-colors">
+          <a href="/login" className="text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors">
             Sign in
           </a>
         </p>

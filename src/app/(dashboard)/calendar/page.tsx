@@ -25,20 +25,20 @@ export default function CalendarPage() {
       {/* Header bar */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-white">Calendar</h1>
+          <h1 className="text-lg font-semibold text-[var(--text-primary)]">Calendar</h1>
           <div className="flex items-center gap-1">
             <button
               onClick={goToPrevMonth}
-              className="p-1.5 rounded-md hover:bg-[var(--bg-card)] text-gray-400 hover:text-gray-200 transition-colors"
+              className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm font-medium text-gray-300 min-w-[140px] text-center">
+            <span className="text-sm font-medium text-[var(--text-secondary)] min-w-[140px] text-center">
               {format(currentDate, 'MMMM yyyy')}
             </span>
             <button
               onClick={goToNextMonth}
-              className="p-1.5 rounded-md hover:bg-[var(--bg-card)] text-gray-400 hover:text-gray-200 transition-colors"
+              className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -46,13 +46,13 @@ export default function CalendarPage() {
         </div>
 
         {/* View toggle */}
-        <div className="flex items-center gap-1 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg p-0.5">
           <button
             onClick={() => setView('month')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors
               ${view === 'month'
-                ? 'bg-emerald-500 text-white'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
               }`}
           >
             <CalendarDays className="h-3.5 w-3.5" />
@@ -62,8 +62,8 @@ export default function CalendarPage() {
             onClick={() => setView('gantt')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors
               ${view === 'gantt'
-                ? 'bg-emerald-500 text-white'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
               }`}
           >
             <BarChart3 className="h-3.5 w-3.5" />

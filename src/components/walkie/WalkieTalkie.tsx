@@ -421,12 +421,12 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
     <div className="border-b border-[var(--border)] p-3 space-y-2 bg-[var(--bg-base)]/50">
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5">
-          <Radio className={`h-3.5 w-3.5 ${isConnected ? 'text-emerald-400' : 'text-gray-600'}`} />
-          <span className={isConnected ? 'text-emerald-400' : 'text-gray-500'}>
+          <Radio className={`h-3.5 w-3.5 ${isConnected ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}`} />
+          <span className={isConnected ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'}>
             {isConnected ? 'Connected' : 'Offline'}
           </span>
-          <span className="text-gray-600">·</span>
-          <span className="text-gray-500">{uniquePeers.length} online</span>
+          <span className="text-[var(--text-tertiary)]">·</span>
+          <span className="text-[var(--text-tertiary)]">{uniquePeers.length} online</span>
         </div>
         {currentSpeaker && (
           <div className="flex items-center gap-1.5 text-amber-400 animate-pulse">
@@ -441,7 +441,7 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
           {uniquePeers.map((peer) => (
             <div
               key={peer.socketId}
-              className="h-6 w-6 rounded-full bg-[var(--bg-card)] border border-[var(--border)] flex items-center justify-center text-[10px] text-gray-400"
+              className="h-6 w-6 rounded-full bg-[var(--bg-surface)] border border-[var(--border)] flex items-center justify-center text-[10px] text-[var(--text-tertiary)]"
               title={peer.userName}
             >
               {peer.userName.charAt(0).toUpperCase()}
@@ -471,10 +471,10 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
           ${isTransmitting
             ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
             : currentSpeaker
-            ? 'bg-[var(--bg-card)] text-gray-500 border border-[var(--border)] cursor-not-allowed'
+            ? 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] border border-[var(--border)] cursor-not-allowed'
             : permissionDenied
             ? 'bg-red-500/10 text-red-400 border border-red-500/30 cursor-not-allowed'
-            : 'bg-[var(--bg-card)] text-gray-300 border border-[var(--border)] hover:border-emerald-500/40 hover:text-emerald-400 active:scale-[0.98]'
+            : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--accent)]/40 hover:text-[var(--accent)] active:scale-[0.98]'
           }`}
       >
         <Mic className={`h-4 w-4 ${isTransmitting ? 'animate-bounce' : ''}`} />

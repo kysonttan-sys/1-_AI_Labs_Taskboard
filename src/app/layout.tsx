@@ -13,7 +13,27 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="dark antialiased min-h-screen bg-[var(--bg-base)] text-white" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const theme = localStorage.getItem('theme');
+                  if (theme === 'dark' || theme === 'light') {
+                    document.documentElement.setAttribute('data-theme', theme);
+                  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                  } else {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="antialiased min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]" suppressHydrationWarning>
         {children}
       </body>
     </html>
