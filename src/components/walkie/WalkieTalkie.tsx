@@ -342,7 +342,7 @@ export default function WalkieTalkie({ boardId, userId }: WalkieTalkieProps) {
       setTransmitting(true);
 
       navigator.mediaDevices
-        .getUserMedia({ audio: true })
+        .getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
         .then((stream) => {
           console.log('[Walkie] Got local stream, tracks:', stream.getAudioTracks().length);
           localStreamRef.current = stream;
