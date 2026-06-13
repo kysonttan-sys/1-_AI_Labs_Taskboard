@@ -260,7 +260,7 @@ model Objective {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@index([position])
+  @@unique([position])
   @@index([endDate])
 }
 
@@ -276,6 +276,6 @@ model KeyResult {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@index([objectiveId])
+  @@unique([objectiveId, position])
   @@index([position])
 }

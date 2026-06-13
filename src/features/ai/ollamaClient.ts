@@ -1,18 +1,39 @@
 import { Ollama } from 'ollama';
 
-let ollamaInstance: Ollama | null = null;
+// Cache Ollama clients per resolved URL so callers that pass an explicit
+// host (e.g. the settings page letting the user point to a different
+// machine) don't get served a stale client from a previous URL. The
+// default-URL singleton is preserved on the special key DEFAULT_KEY
+// so the common case (no explicit host) still avoids re-instantiation.
+const DEFAULT_KEY = '__default__';
+const ollamaClients = new Map<string, Ollama>();
 
-export function getOllamaClient(url?: string): Ollama {
-  if (ollamaInstance && !url) return ollamaInstance;
-  const client = new Ollama({ host: url || 'http://localhost:11434' });
-  if (!url) ollamaInstance = client;
+/**
+ * Resolves the Ollama base URL in this priority:
+ *   1. Explicit argument (the caller's choice)
+ *   2. OLLAMA_URL env var (set on Render / production)
+ *   3. http://localhost:11434 (local dev)
+ */
+export function resolveOllamaUrl(explicit?: string | null): string {
+  if (explicit) return explicit;
+  if (process.env.OLLAMA_URL) return process.env.OLLAMA_URL;
+  return 'http://localhost:11434';
+}
+
+export function getOllamaClient(url?: string | null): Ollama {
+  const resolved = resolveOllamaUrl(url);
+  const key = url ? resolved : DEFAULT_KEY;
+  const cached = ollamaClients.get(key);
+  if (cached) return cached;
+  const client = new Ollama({ host: resolved });
+  ollamaClients.set(key, client);
   return client;
 }
 
 export async function* streamChat(
   model: string,
   messages: Array<{ role: string; content: string }>,
-  host?: string
+  host?: string | null
 ): AsyncGenerator<string> {
   const ollama = getOllamaClient(host);
   const response = await ollama.chat({ model, messages, stream: true });
@@ -25,7 +46,7 @@ export async function* streamChat(
   }
 }
 
-export async function checkOllamaConnection(host?: string): Promise<{ connected: boolean; models: string[] }> {
+export async function checkOllamaConnection(host?: string | null): Promise<{ connected: boolean; models: string[] }> {
   try {
     const ollama = getOllamaClient(host);
     const models = await ollama.list();

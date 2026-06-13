@@ -106,7 +106,7 @@ export default function Sidebar() {
             <div className="flex items-center gap-2">
               <img src="/logo.png" alt="Logo" className="h-8 w-8 shrink-0 rounded theme-logo" />
               <span className="font-semibold text-[var(--text-primary)] text-sm tracking-tight">
-                TaskBoard
+                Taskboard
               </span>
             </div>
           ) : (

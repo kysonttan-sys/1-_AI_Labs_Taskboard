@@ -1,5 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { prisma } from '@/lib/db/client';
+
+// Stub getSession() so the route handlers don't try to call next/headers
+// (which throws outside an active Next request context in tests).
+vi.mock('@/lib/auth/session', () => ({
+  getSession: async () => ({ userId: 'test-user', name: 'Test', role: 'member' }),
+}));
 
 async function cleanOkrs() {
   await prisma.keyResult.deleteMany({});
@@ -89,5 +95,39 @@ describe('POST /api/okrs', () => {
     const body = await res.json();
     expect(body.title).toBe('Ship product');
     expect(body.id).toBeDefined();
+  });
+
+  it('retries on P2002 when a concurrent objective create collides on position', async () => {
+    const realCreate = prisma.objective.create.bind(prisma.objective);
+    const { Prisma } = await import('@/generated/prisma/client');
+    let firstCall = true;
+    (prisma.objective as any).create = (args: any) => {
+      if (firstCall) {
+        firstCall = false;
+        return Promise.reject(
+          new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+            code: 'P2002',
+            clientVersion: 'test',
+          })
+        );
+      }
+      return realCreate(args);
+    };
+
+    const { POST } = await import('./route');
+    const req = new Request('http://test/api/okrs', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Raced',
+        startDate: '2026-04-01',
+        endDate: '2026-06-30',
+      }),
+    });
+    const res = await POST(req as any);
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.title).toBe('Raced');
+    expect(body.position).toBe(0);
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useOkrStore } from '@/features/okrs/okrStore';
 import { pct, formatValue } from '@/features/okrs/progress';
 import { Trash2 } from 'lucide-react';
@@ -22,10 +22,20 @@ export default function KeyResultRow({ objectiveId, kr }: Props) {
   const { updateKeyResult, deleteKeyResult } = useOkrStore();
   const [currentText, setCurrentText] = useState(String(kr.current));
   const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync local input when the store value changes from elsewhere.
+  // Sync local input from the store ONLY when the input isn't focused,
+  // and only when the store's current actually differs from what we last
+  // rendered. This prevents an in-flight optimistic update or a refetch
+  // from clobbering text the user is mid-way through editing.
   useEffect(() => {
-    setCurrentText(String(kr.current));
+    if (document.activeElement === inputRef.current) return;
+    if (String(kr.current) !== currentText) {
+      setCurrentText(String(kr.current));
+    }
+    // We intentionally only react to kr.current changes — we don't want
+    // our own setCurrentText to re-trigger this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kr.current]);
 
   const commit = async () => {
@@ -65,6 +75,7 @@ export default function KeyResultRow({ objectiveId, kr }: Props) {
       </div>
       <div className="flex items-center gap-3">
         <input
+          ref={inputRef}
           type="number"
           value={currentText}
           onChange={(e) => setCurrentText(e.target.value)}

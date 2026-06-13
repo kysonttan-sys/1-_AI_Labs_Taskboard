@@ -50,7 +50,7 @@ export default function LoginPage() {
           <div className="h-12 w-12 rounded-xl bg-[var(--accent-muted)] flex items-center justify-center mb-4">
             <LayoutDashboard className="h-6 w-6 text-[var(--accent)]" />
           </div>
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">TaskBoard</h1>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Taskboard</h1>
           <p className="text-sm text-[var(--text-tertiary)] mt-1">Sign in to your account</p>
         </div>
 

@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { getSession } from '@/lib/auth/session';
+import { Prisma } from '@/generated/prisma/client';
+
+const MAX_POSITION_RETRIES = 5;
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const objectives = await prisma.objective.findMany({
     orderBy: [{ position: 'asc' }, { endDate: 'asc' }],
     include: {
@@ -12,6 +18,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const body = await request.json();
   const { title, description, startDate, endDate } = body;
 
@@ -37,18 +45,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'endDate must be after startDate' }, { status: 400 });
   }
 
-  const maxPosition = await prisma.objective.aggregate({ _max: { position: true } });
+  // Race-safe position assignment: two concurrent creates can both see the
+  // same MAX(position); the @@unique([position]) constraint on Objective
+  // surfaces this as P2002, and we recompute on the next attempt.
+  for (let attempt = 0; attempt < MAX_POSITION_RETRIES; attempt++) {
+    const maxPosition = await prisma.objective.aggregate({ _max: { position: true } });
+    const nextPosition = (maxPosition._max.position ?? -1) + 1;
 
-  const objective = await prisma.objective.create({
-    data: {
-      title: title.trim(),
-      description: description || null,
-      startDate: start,
-      endDate: end,
-      position: (maxPosition._max.position ?? -1) + 1,
-    },
-    include: { keyResults: { orderBy: { position: 'asc' } } },
-  });
+    try {
+      const objective = await prisma.objective.create({
+        data: {
+          title: title.trim(),
+          description: description || null,
+          startDate: start,
+          endDate: end,
+          position: nextPosition,
+        },
+        include: { keyResults: { orderBy: { position: 'asc' } } },
+      });
+      return NextResponse.json(objective, { status: 201 });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        continue;
+      }
+      throw e;
+    }
+  }
 
-  return NextResponse.json(objective, { status: 201 });
+  return NextResponse.json(
+    { error: 'Could not allocate a position for the new objective. Please retry.' },
+    { status: 503 }
+  );
 }

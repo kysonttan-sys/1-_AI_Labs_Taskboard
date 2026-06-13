@@ -1,5 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { prisma } from '@/lib/db/client';
+
+vi.mock('@/lib/auth/session', () => ({
+  getSession: async () => ({ userId: 'test-user', name: 'Test', role: 'member' }),
+}));
 
 async function cleanOkrs() {
   await prisma.keyResult.deleteMany({});
@@ -70,6 +74,30 @@ describe('PATCH /api/okrs/[objectiveId]/key-results/[krId]', () => {
       { params: Promise.resolve({ objectiveId: obj.id, krId: 'missing' }) } as any
     );
     expect(res.status).toBe(404);
+  });
+
+  it('returns 400 when current would exceed target', async () => {
+    const obj = await makeObj();
+    const kr = await makeKr(obj.id, { target: 10, current: 5 });
+    const { PATCH } = await import('./route');
+    const res = await PATCH(
+      mockRequest({ current: 99 }),
+      { params: Promise.resolve({ objectiveId: obj.id, krId: kr.id }) } as any
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/current.*target/i);
+  });
+
+  it('returns 400 when target would drop below current', async () => {
+    const obj = await makeObj();
+    const kr = await makeKr(obj.id, { target: 100, current: 50 });
+    const { PATCH } = await import('./route');
+    const res = await PATCH(
+      mockRequest({ target: 10 }),
+      { params: Promise.resolve({ objectiveId: obj.id, krId: kr.id }) } as any
+    );
+    expect(res.status).toBe(400);
   });
 });
 

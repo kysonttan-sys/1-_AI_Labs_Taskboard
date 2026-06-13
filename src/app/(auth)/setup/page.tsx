@@ -87,7 +87,7 @@ export default function SetupPage() {
           <div className="h-12 w-12 rounded-xl bg-[var(--accent-muted)] flex items-center justify-center mb-4">
             <Shield className="h-6 w-6 text-[var(--accent)]" />
           </div>
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Welcome to TaskBoard</h1>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Welcome to Taskboard</h1>
           <p className="text-sm text-[var(--text-tertiary)] mt-1">Create your admin account to get started</p>
         </div>
 

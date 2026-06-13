@@ -21,6 +21,18 @@ interface OkrState {
   deleteKeyResult: (objectiveId: string, krId: string) => Promise<void>;
 }
 
+// Per-KR request counter for last-write-wins semantics. Each in-flight
+// updateKeyResult claims a version; responses/rollbacks from older versions
+// are ignored so a slow first request can never clobber a newer optimistic
+// value, and a failure on request N can't roll back the value set by N+1.
+const krRequestVersion = new Map<string, number>();
+
+function nextVersion(krId: string): number {
+  const v = (krRequestVersion.get(krId) ?? 0) + 1;
+  krRequestVersion.set(krId, v);
+  return v;
+}
+
 export const useOkrStore = create<OkrState>((set, get) => ({
   objectives: [],
   isLoading: false,
@@ -65,9 +77,13 @@ export const useOkrStore = create<OkrState>((set, get) => ({
   },
 
   updateKeyResult: async (objectiveId, krId, input) => {
-    // Optimistic update: apply locally, revert on error.
-    const previous = get().objectives.find((o) => o.id === objectiveId);
-    const previousKr = previous?.keyResults.find((kr) => kr.id === krId);
+    // Capture pre-optimistic value so a rollback restores the user's
+    // original view, not the prior call's optimistic value.
+    const before = get().objectives.find((o) => o.id === objectiveId);
+    const previousKr = before?.keyResults.find((kr) => kr.id === krId);
+    const version = nextVersion(krId);
+
+    // Optimistic update
     set((s) => ({
       objectives: s.objectives.map((o) =>
         o.id === objectiveId
@@ -80,8 +96,12 @@ export const useOkrStore = create<OkrState>((set, get) => ({
           : o
       ),
     }));
+
     try {
       const kr = await okrsApi.updateKeyResult(objectiveId, krId, input);
+      // If a newer updateKeyResult has started since, drop this stale
+      // response on the floor — the newer call owns the truth now.
+      if (krRequestVersion.get(krId) !== version) return;
       set((s) => ({
         objectives: s.objectives.map((o) =>
           o.id === objectiveId
@@ -93,14 +113,17 @@ export const useOkrStore = create<OkrState>((set, get) => ({
         ),
       }));
     } catch (e) {
-      // Revert.
-      if (previous && previousKr) {
+      // A newer call owns the rollback decision — just propagate the error.
+      if (krRequestVersion.get(krId) !== version) throw e;
+      if (previousKr) {
         set((s) => ({
           objectives: s.objectives.map((o) =>
             o.id === objectiveId
               ? {
                   ...o,
-                  keyResults: o.keyResults.map((k) => (k.id === krId ? previousKr : k)),
+                  keyResults: o.keyResults.map((k) =>
+                    k.id === krId ? previousKr : k
+                  ),
                 }
               : o
           ),
@@ -114,9 +137,7 @@ export const useOkrStore = create<OkrState>((set, get) => ({
     await okrsApi.removeKeyResult(objectiveId, krId);
     set((s) => ({
       objectives: s.objectives.map((o) =>
-        o.id === objectiveId
-          ? { ...o, keyResults: o.keyResults.filter((k) => k.id !== krId) }
-          : o
+        o.id === objectiveId ? { ...o, keyResults: o.keyResults.filter((k) => k.id !== krId) } : o
       ),
     }));
   },

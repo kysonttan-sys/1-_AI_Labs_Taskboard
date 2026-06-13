@@ -78,7 +78,7 @@ export default function RegisterPage() {
             <UserPlus className="h-6 w-6 text-[var(--accent)]" />
           </div>
           <h1 className="text-xl font-semibold text-[var(--text-primary)]">Create your account</h1>
-          <p className="text-sm text-[var(--text-tertiary)] mt-1">Join your team on TaskBoard</p>
+          <p className="text-sm text-[var(--text-tertiary)] mt-1">Join your team on Taskboard</p>
         </div>
 
         {/* Card */}

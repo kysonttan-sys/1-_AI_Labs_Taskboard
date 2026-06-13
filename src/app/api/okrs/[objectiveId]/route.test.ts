@@ -1,5 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { prisma } from '@/lib/db/client';
+
+vi.mock('@/lib/auth/session', () => ({
+  getSession: async () => ({ userId: 'test-user', name: 'Test', role: 'member' }),
+}));
 
 async function cleanOkrs() {
   await prisma.keyResult.deleteMany({});

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { getSession } from '@/lib/auth/session';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ objectiveId: string; krId: string }> }
 ) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const { objectiveId, krId } = await params;
   const body = await request.json();
   const { title, target, current, unit } = body;
@@ -38,6 +41,19 @@ export async function PATCH(
     }
   }
 
+  // If either side of the current/target relationship is being updated,
+  // validate that current <= target. The PATCH may not include both
+  // fields, so resolve the effective target by combining the patch with
+  // the existing row.
+  const effectiveTarget = target !== undefined ? target : existing.target;
+  const effectiveCurrent = current !== undefined ? current : existing.current;
+  if (effectiveCurrent > effectiveTarget) {
+    return NextResponse.json(
+      { error: 'current must not exceed target' },
+      { status: 400 }
+    );
+  }
+
   const kr = await prisma.keyResult.update({
     where: { id: krId },
     data: {
@@ -55,6 +71,8 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ objectiveId: string; krId: string }> }
 ) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const { objectiveId, krId } = await params;
   const existing = await prisma.keyResult.findFirst({ where: { id: krId, objectiveId } });
   if (!existing) {

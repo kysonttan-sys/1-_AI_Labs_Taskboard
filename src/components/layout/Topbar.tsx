@@ -96,7 +96,7 @@ export default function Topbar() {
         ) : (
           <h1 className="text-base font-semibold text-[var(--text-primary)] truncate">
             {activeBoard?.icon && <span className="mr-1">{activeBoard.icon}</span>}
-            {activeBoard?.name || 'TaskBoard'}
+            {activeBoard?.name || 'Taskboard'}
           </h1>
         )}
 

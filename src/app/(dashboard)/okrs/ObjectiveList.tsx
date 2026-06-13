@@ -24,15 +24,23 @@ export default function ObjectiveList({ initialObjectives }: Props) {
   const { objectives, fetchObjectives, error, isLoading } = useOkrStore();
   const [modalOpen, setModalOpen] = useState(false);
 
+  // Seed the store with SSR data on first mount, then skip the refetch
+  // entirely. The store starts empty on the client; without this, every
+  // cold load would issue a /api/okrs request even though we already
+  // have fresh data from the server render.
   useEffect(() => {
-    if (objectives.length === 0) {
-      fetchObjectives();
+    if (useOkrStore.getState().objectives.length === 0 && initialObjectives.length > 0) {
+      useOkrStore.setState({ objectives: initialObjectives });
     }
+    // We deliberately don't call fetchObjectives() here — the SSR data
+    // is already current as of the page render. Refetching would just
+    // burn a network call for no benefit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Prefer the freshly-fetched store data; fall back to the SSR initial data
-  // until the first fetch completes.
+  // Use the store data when it has been populated (e.g. by a mutation
+  // that ran after mount); fall back to the SSR initial data only if
+  // the store is empty AND we got no SSR data either.
   const list = objectives.length > 0 ? objectives : initialObjectives;
 
   const overallPct = (obj: Objective) => {
