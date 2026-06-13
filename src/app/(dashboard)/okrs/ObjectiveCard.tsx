@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useOkrStore } from '@/features/okrs/okrStore';
-import { pct } from '@/features/okrs/progress';
 import { Plus, Pencil, Trash2, Calendar } from 'lucide-react';
 import KeyResultRow from './KeyResultRow';
 import ObjectiveCreateModal from './ObjectiveCreateModal';

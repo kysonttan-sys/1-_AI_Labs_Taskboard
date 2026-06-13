@@ -6,6 +6,8 @@ import { SCHEDULE_SYSTEM_PROMPT } from '@/features/ai/prompts';
 import { isAIEnabled } from '@/lib/ai/config';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 const SchedulePlanSchema = z.object({
   projectName: z.string(),
   tasks: z.array(

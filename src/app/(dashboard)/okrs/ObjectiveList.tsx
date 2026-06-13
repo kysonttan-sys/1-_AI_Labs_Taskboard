@@ -21,7 +21,7 @@ interface Props {
 }
 
 export default function ObjectiveList({ initialObjectives }: Props) {
-  const { objectives, fetchObjectives, error, isLoading } = useOkrStore();
+  const { objectives, error, isLoading } = useOkrStore();
   const [modalOpen, setModalOpen] = useState(false);
 
   // Seed the store with SSR data on first mount, then skip the refetch

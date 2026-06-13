@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 
+export const dynamic = 'force-dynamic';
+
 // Liveness + DB reachability check for Render's health probe. We don't
 // auth-gate this: it's a yes/no signal for the platform, not user data.
 export async function GET() {

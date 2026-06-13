@@ -6,6 +6,8 @@ import { SUGGESTION_SYSTEM_PROMPT } from '@/features/ai/prompts';
 import { isAIEnabled } from '@/lib/ai/config';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 const SuggestionSchema = z.object({
   suggestions: z.array(
     z.discriminatedUnion('type', [

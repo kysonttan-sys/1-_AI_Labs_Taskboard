@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db/client';
 import { checkOllamaConnection } from '@/features/ai/ollamaClient';
 import { isAIEnabled } from '@/lib/ai/config';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   if (!isAIEnabled()) {
     return NextResponse.json({ connected: false, models: [], currentModel: '', ollamaUrl: '', disabled: true });

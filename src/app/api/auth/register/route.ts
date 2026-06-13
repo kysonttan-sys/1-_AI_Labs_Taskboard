@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db/client';
 import { hashPin } from '@/lib/auth/pin';
 import { createSessionToken } from '@/lib/auth/session';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { name, pin } = await request.json();

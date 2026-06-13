@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   const { name, pin, color } = await request.json();
   if (!name || !pin) return NextResponse.json({ error: 'Name and PIN are required' }, { status: 400 });

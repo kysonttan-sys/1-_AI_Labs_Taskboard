@@ -5,6 +5,8 @@ import { buildChatContext } from '@/features/ai/contextBuilders';
 import { CHAT_SYSTEM_PROMPT } from '@/features/ai/prompts';
 import { isAIEnabled } from '@/lib/ai/config';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   if (!isAIEnabled()) {
     return NextResponse.json({ error: 'AI features are not available in this deployment' }, { status: 503 });
