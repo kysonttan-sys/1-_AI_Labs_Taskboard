@@ -1,0 +1,40 @@
+# Render Blueprint — Taskboard (OKR Foundation)
+# https://render.com/docs/blueprint-spec
+#
+# To use: render.com → New → Blueprint → point at this repo.
+# You still need to set DATABASE_URL, SESSION_SECRET, and (optional) OLLAMA_URL
+# in the service's Environment tab after first deploy. Render will auto-link
+# the Postgres service to DATABASE_URL.
+
+services:
+  - type: web
+    name: taskboard
+    runtime: node
+    plan: starter              # $7/mo — free tier sleeps and breaks Socket.io
+    region: oregon             # pick whatever's nearest you
+    branch: feature/okr-foundation
+    buildCommand: npm install && npx prisma migrate deploy && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        sync: false             # you set this manually in the dashboard
+      - key: DATABASE_URL
+        fromDatabase:
+          name: taskboard-db
+          property: connectionString
+      # Optional AI integration — see docs/ollama-tunnel.md
+      # - key: OLLAMA_URL
+      #   value: https://ollama.your-domain.com
+      # - key: OLLAMA_ENABLED
+      #   value: "true"
+
+databases:
+  - name: taskboard-db
+    plan: starter              # $7/mo Postgres
+    region: oregon
+    databaseName: taskboard
+    user: taskboard
