@@ -141,6 +141,58 @@ async function main() {
   console.log('Seed data created successfully!');
   console.log('Admin PIN: 1234');
   console.log('Team members: Alex (1234), Sarah (1234)');
+
+  // ---- OKR sample data ----
+  const okrShipQ2 = await prisma.objective.create({
+    data: {
+      title: 'Ship Q2 product launch',
+      description: 'Public release of the new Taskboard v2.0 to all customers.',
+      startDate: new Date('2026-04-01'),
+      endDate: new Date('2026-06-30'),
+      position: 0,
+      keyResults: {
+        create: [
+          { title: 'Beta users', target: 500, current: 312, unit: 'users', position: 0 },
+          { title: 'NPS score', target: 50, current: 47, unit: 'pts', position: 1 },
+          { title: 'Critical bugs at launch', target: 0, current: 3, unit: 'bugs', position: 2 },
+        ],
+      },
+    },
+  });
+
+  await prisma.objective.create({
+    data: {
+      title: 'Improve onboarding completion',
+      description: 'Get new users from signup to first board in under 5 minutes.',
+      startDate: new Date('2026-04-01'),
+      endDate: new Date('2026-09-30'),
+      position: 1,
+      keyResults: {
+        create: [
+          { title: 'Onboarding completion rate', target: 80, current: 64, unit: '%', position: 0 },
+          { title: 'Time to first board', target: 5, current: 7, unit: 'min', position: 1 },
+        ],
+      },
+    },
+  });
+
+  await prisma.objective.create({
+    data: {
+      title: 'Build public API',
+      description: 'Expose boards, cards, and OKRs over a versioned REST API with API keys.',
+      startDate: new Date('2026-07-01'),
+      endDate: new Date('2026-12-31'),
+      position: 2,
+      keyResults: {
+        create: [
+          { title: 'API endpoints shipped', target: 20, current: 0, unit: 'endpoints', position: 0 },
+          { title: 'API uptime', target: 99.9, current: 0, unit: '%', position: 1 },
+        ],
+      },
+    },
+  });
+
+  console.log('Seeded OKRs including', okrShipQ2.id);
 }
 
 main()

@@ -24,6 +24,7 @@ model User {
   calendarEvents        CalendarEvent[]
   notifications          Notification[]
   triggeredNotifications Notification[] @relation("NotificationTrigger")
+  objectives             Objective[]
 }
 
 model Board {
@@ -244,4 +245,37 @@ model CalendarEvent {
 
   @@index([userId])
   @@index([startDate])
+}
+
+model Objective {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  position    Int       @default(0)
+  ownerId     String?
+  owner       User?     @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  keyResults  KeyResult[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([position])
+  @@index([endDate])
+}
+
+model KeyResult {
+  id          String    @id @default(cuid())
+  title       String
+  target      Float
+  current     Float     @default(0)
+  unit        String?
+  position    Int       @default(0)
+  objectiveId String
+  objective   Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([objectiveId])
+  @@index([position])
 }
