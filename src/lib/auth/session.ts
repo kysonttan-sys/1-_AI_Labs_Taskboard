@@ -1,9 +1,17 @@
 import { cookies } from 'next/headers';
 import * as crypto from 'crypto';
 
-const SECRET: string = process.env.SESSION_SECRET!;
-if (!process.env.SESSION_SECRET) {
-  throw new Error('SESSION_SECRET environment variable is required');
+let cachedSecret: string | null = null;
+
+function getSecret(): string {
+  if (!cachedSecret) {
+    const secret = process.env.SESSION_SECRET;
+    if (!secret) {
+      throw new Error('SESSION_SECRET environment variable is required');
+    }
+    cachedSecret = secret;
+  }
+  return cachedSecret;
 }
 
 export interface SessionData {
@@ -13,6 +21,7 @@ export interface SessionData {
 }
 
 export function createSessionToken(data: SessionData): string {
+  const SECRET = getSecret();
   const payload = JSON.stringify(data);
   const iv = crypto.randomBytes(12);
   const key = crypto.createHash('sha256').update(SECRET).digest();
@@ -25,6 +34,7 @@ export function createSessionToken(data: SessionData): string {
 
 export function verifySessionToken(token: string): SessionData | null {
   try {
+    const SECRET = getSecret();
     const parts = token.split(':');
     if (parts.length !== 3) return null;
     const iv = Buffer.from(parts[0], 'hex');

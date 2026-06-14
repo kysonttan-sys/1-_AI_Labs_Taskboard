@@ -18,7 +18,6 @@ model User {
 
   assignedCards          CardAssignee[]
   comments              Comment[]
-  chatMessages           AIChatMessage[]
   chatMsgs              ChatMessage[]
   googleToken           GoogleCalendarToken?
   calendarEvents        CalendarEvent[]
@@ -145,31 +144,8 @@ model Comment {
   @@index([cardId])
 }
 
-model AIChatMessage {
-  id        String   @id @default(cuid())
-  role      String
-  content   String
-  context   String?
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  boardId   String?
-  cardId    String?
-  createdAt DateTime @default(now())
-}
-
-model AIDigest {
-  id        String   @id @default(cuid())
-  weekStart DateTime
-  weekEnd   DateTime
-  summary   String
-  boardId   String?
-  createdAt DateTime @default(now())
-}
-
 model AppSettings {
   id            String  @id @default("app")
-  ollamaUrl     String  @default("http://localhost:11434")
-  ollamaModel   String  @default("kimi-k2.6:cloud")
   setupComplete Boolean @default(false)
 }
 

@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import { useBoardStore } from '@/features/board/boardStore';
 import { useAuthStore } from '@/features/auth/authStore';
-import { useAiStore } from '@/features/ai/aiStore';
 import { useCalendarStore } from '@/features/calendar/calendarStore';
-import { Sparkles, Columns3, Calendar, BarChart3, MoreVertical, Trash2, Pencil, ChevronDown } from 'lucide-react';
+import { Columns3, Calendar, BarChart3, MoreVertical, Trash2, Pencil, ChevronDown } from 'lucide-react';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import NotificationBell from '@/components/notifications/NotificationBell';
@@ -18,7 +17,6 @@ export default function Topbar() {
   const boardId = params?.boardId as string | undefined;
   const { boards, activeBoardId, deleteBoard, updateBoard } = useBoardStore();
   const { user } = useAuthStore();
-  const { toggleOpen } = useAiStore();
   const { view: calendarView, setView: setCalendarView } = useCalendarStore();
   const [boardMenuOpen, setBoardMenuOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -216,19 +214,8 @@ export default function Topbar() {
         )}
       </div>
 
-      {/* Right: AI toggle + Notifications + Avatar */}
+      {/* Right: Notifications + Avatar */}
       <div className="flex items-center gap-3">
-        <button
-          onClick={toggleOpen}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
-            text-[var(--text-tertiary)] hover:text-[var(--accent)] hover:bg-[var(--accent-muted)]
-            border border-[var(--border)] hover:border-[var(--accent)]/30 transition-colors"
-          title="AI Chat"
-        >
-          <Sparkles className="h-4 w-4" />
-          <span className="hidden sm:inline">AI</span>
-        </button>
-
         <NotificationBell />
 
         <div className="h-8 w-8 rounded-full bg-[var(--accent-muted)] flex items-center justify-center text-[11px] font-semibold text-[var(--accent)]">

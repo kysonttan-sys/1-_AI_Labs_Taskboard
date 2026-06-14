@@ -4,7 +4,7 @@ import { getSession } from '@/lib/auth/session';
 
 export async function GET() {
   const settings = await prisma.appSettings.findUnique({ where: { id: 'app' } });
-  return NextResponse.json(settings || { ollamaUrl: 'http://localhost:11434', ollamaModel: 'kimi-k2.6:cloud', setupComplete: false });
+  return NextResponse.json(settings || { setupComplete: false });
 }
 
 export async function PATCH(request: Request) {
@@ -16,7 +16,7 @@ export async function PATCH(request: Request) {
   const body = await request.json();
 
   // Only allow updating specific fields
-  const allowedFields = ['ollamaUrl', 'ollamaModel', 'setupComplete'];
+  const allowedFields = ['setupComplete'];
   const data: Record<string, unknown> = {};
   for (const key of allowedFields) {
     if (key in body) {

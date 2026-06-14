@@ -5,11 +5,28 @@ import next from 'next';
 import { Server } from 'socket.io';
 import * as crypto from 'crypto';
 
+process.on('uncaughtException', (err) => {
+  console.error('FATAL uncaughtException:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('FATAL unhandledRejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
 const dev = !process.argv.includes('--production');
 
-const SECRET = process.env.SESSION_SECRET;
-if (!SECRET) {
-  throw new Error('SESSION_SECRET environment variable is required');
+let cachedSecret: string | null = null;
+function getSecret(): string {
+  if (!cachedSecret) {
+    const secret = process.env.SESSION_SECRET;
+    if (!secret) {
+      throw new Error('SESSION_SECRET environment variable is required');
+    }
+    cachedSecret = secret;
+  }
+  return cachedSecret;
 }
 
 function verifySessionToken(token: string): { userId: string; name: string; role: string } | null {
@@ -19,7 +36,7 @@ function verifySessionToken(token: string): { userId: string; name: string; role
     const iv = Buffer.from(parts[0], 'hex');
     const authTag = Buffer.from(parts[1], 'hex');
     const encrypted = parts[2];
-    const key = crypto.createHash('sha256').update(SECRET!).digest();
+    const key = crypto.createHash('sha256').update(getSecret()).digest();
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(authTag);
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
@@ -30,7 +47,9 @@ function verifySessionToken(token: string): { userId: string; name: string; role
   }
 }
 const hostname = '0.0.0.0';
-const port = parseInt(process.env.PORT || '3000', 10);
+const rawPort = process.env.PORT || '3000';
+const parsedPort = parseInt(rawPort, 10);
+const port = Number.isNaN(parsedPort) ? 3000 : parsedPort;
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
@@ -41,8 +60,10 @@ interface RoomState {
 
 const roomStates = new Map<string, RoomState>();
 
-app.prepare().then(() => {
-  const httpServer = createServer(async (req, res) => {
+app.prepare()
+  .then(() => {
+    console.log('> Next.js app prepared');
+    const httpServer = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url!, true);
       await handle(req, res, parsedUrl);
@@ -191,4 +212,8 @@ app.prepare().then(() => {
   httpServer.listen(port, hostname, () => {
     console.log(`> Server ready on http://${hostname}:${port}`);
   });
+})
+.catch((err) => {
+  console.error('> Failed to prepare Next.js app:', err);
+  process.exit(1);
 });

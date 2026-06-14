@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Settings, Cpu, Users, Trash2, Plus, ExternalLink, Calendar, Unlink } from 'lucide-react';
+import { Settings, Users, Trash2, Plus, Calendar, Unlink } from 'lucide-react';
 import { getInitials } from '@/lib/utils/initials';
 
 interface User {
@@ -11,67 +11,22 @@ interface User {
   role: string;
 }
 
-interface AppSettings {
-  ollamaUrl: string;
-  ollamaModel: string;
-  setupComplete: boolean;
-}
-
-interface ModelInfo {
-  connected: boolean;
-  models: string[];
-  currentModel: string;
-  ollamaUrl: string;
-}
-
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<AppSettings>({ ollamaUrl: 'http://localhost:11434', ollamaModel: 'kimi-k2.6:cloud', setupComplete: false });
-  const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberPin, setNewMemberPin] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
   const [googleConnected, setGoogleConnected] = useState(false);
 
   useEffect(() => {
-    loadSettings();
     loadUsers();
-    checkOllama();
     checkGoogleCalendar();
   }, []);
-
-  async function loadSettings() {
-    const res = await fetch('/api/settings');
-    setSettings(await res.json());
-  }
 
   async function loadUsers() {
     const res = await fetch('/api/users');
     setUsers(await res.json());
   }
 
-  async function checkOllama() {
-    try {
-      const res = await fetch('/api/ai/models');
-      setModelInfo(await res.json());
-    } catch {
-      setModelInfo({ connected: false, models: [], currentModel: '', ollamaUrl: '' });
-    }
-  }
-
-  async function saveSettings() {
-    setSaving(true);
-    await fetch('/api/settings', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings),
-    });
-    setMessage('Settings saved');
-    setSaving(false);
-    setTimeout(() => setMessage(''), 3000);
-    checkOllama();
-  }
 
   async function addMember() {
     if (!newMemberName.trim() || !newMemberPin.trim()) return;
@@ -121,78 +76,6 @@ export default function SettingsPage() {
         <Settings className="h-6 w-6 text-[var(--accent)]" />
         <h1 className="text-xl font-semibold text-[var(--text-primary)]">Settings</h1>
       </div>
-
-      {message && (
-        <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-lg px-4 py-3 text-[var(--accent)] text-sm">
-          {message}
-        </div>
-      )}
-
-      {/* Ollama Connection */}
-      <section className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">
-        <div className="flex items-center gap-3">
-          <Cpu className="h-5 w-5 text-[var(--accent)]" />
-          <h2 className="text-lg font-medium text-[var(--text-primary)]">AI Connection (Ollama)</h2>
-          <div className={`ml-auto flex items-center gap-1.5 text-xs ${modelInfo?.connected ? 'text-[var(--accent)]' : 'text-red-400'}`}>
-            <div className={`h-2 w-2 rounded-full ${modelInfo?.connected ? 'bg-[var(--accent)]' : 'bg-red-400'}`} />
-            {modelInfo?.connected ? 'Connected' : 'Disconnected'}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm text-[var(--text-tertiary)] mb-1">Ollama URL</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={settings.ollamaUrl}
-                onChange={(e) => setSettings({ ...settings, ollamaUrl: e.target.value })}
-                className="flex-1 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
-                placeholder="http://localhost:11434"
-              />
-              <a
-                href={settings.ollamaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-2 border border-[var(--border)] rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm text-[var(--text-tertiary)] mb-1">Model</label>
-            {modelInfo?.connected && modelInfo.models.length > 0 ? (
-              <select
-                value={settings.ollamaModel}
-                onChange={(e) => setSettings({ ...settings, ollamaModel: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
-              >
-                {modelInfo.models.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={settings.ollamaModel}
-                onChange={(e) => setSettings({ ...settings, ollamaModel: e.target.value })}
-                className="w-full px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
-                placeholder="kimi-k2.6:cloud"
-              />
-            )}
-          </div>
-
-          <button
-            onClick={saveSettings}
-            disabled={saving}
-            className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] text-sm font-medium rounded-md transition-colors disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Settings'}
-          </button>
-        </div>
-      </section>
 
       {/* Google Calendar */}
       <section className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-4 sm:p-5 space-y-4">

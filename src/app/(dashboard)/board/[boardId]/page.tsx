@@ -8,8 +8,6 @@ import { useAuthStore } from '@/features/auth/authStore';
 import KanbanBoard from '@/components/board/KanbanBoard';
 import CardDetailModal from '@/components/board/CardDetailModal';
 import TeamChat from '@/components/chat/TeamChat';
-import AISuggestionPanel from '@/components/ai/AISuggestionPanel';
-import { Lightbulb, X } from 'lucide-react';
 
 export default function BoardPage() {
   const params = useParams();
@@ -18,7 +16,6 @@ export default function BoardPage() {
   const { isOpen: chatOpen } = useChatStore();
   const { user } = useAuthStore();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     if (boardId) {
@@ -68,49 +65,13 @@ export default function BoardPage() {
       <div className="flex-1 min-w-0">
         <KanbanBoard onCardClick={(card) => setSelectedCardId(card.id)} />
       </div>
-      {showSuggestions && (
-        <div className="hidden sm:block w-80 shrink-0 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-4 overflow-y-auto">
-          <AISuggestionPanel />
-        </div>
-      )}
       <div className="flex items-start gap-2 shrink-0">
-        <button
-          onClick={() => setShowSuggestions(!showSuggestions)}
-          className={`shrink-0 self-start p-2 rounded-md border transition-colors ${
-            showSuggestions
-              ? 'bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent)]'
-              : 'bg-[var(--bg-elevated)] border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
-          }`}
-          title="AI Suggestions"
-        >
-          <Lightbulb className="h-4 w-4" />
-        </button>
         {!chatOpen && (
           <TeamChat boardId={boardId} />
         )}
       </div>
       {chatOpen && (
         <TeamChat boardId={boardId} />
-      )}
-      {/* Mobile suggestion overlay */}
-      {showSuggestions && (
-        <div className="sm:hidden fixed inset-0 z-40 flex items-end justify-center">
-          <div className="absolute inset-0 bg-[var(--backdrop)] backdrop-blur-sm" onClick={() => setShowSuggestions(false)} />
-          <div className="relative w-full max-h-[70vh] bg-[var(--bg-elevated)] border-t border-[var(--border)] rounded-t-2xl shadow-2xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
-              <h3 className="text-sm font-medium text-[var(--text-primary)]">AI Suggestions</h3>
-              <button
-                onClick={() => setShowSuggestions(false)}
-                className="p-1 rounded hover:bg-[var(--bg-base)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              <AISuggestionPanel />
-            </div>
-          </div>
-        </div>
       )}
       {selectedCard && (
         <CardDetailModal
