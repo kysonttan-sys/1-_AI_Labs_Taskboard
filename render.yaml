@@ -13,7 +13,7 @@ services:
     plan: starter              # $7/mo — free tier sleeps and breaks Socket.io
     region: oregon             # pick whatever's nearest you
     branch: feature/okr-foundation
-    buildCommand: npm install && npx prisma migrate deploy && npm run build
+    buildCommand: npm install && npx prisma migrate deploy --skip-lock && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: true
