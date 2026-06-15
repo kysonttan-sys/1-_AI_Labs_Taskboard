@@ -19,6 +19,7 @@ interface OkrState {
   addKeyResult: (objectiveId: string, input: CreateKeyResultInput) => Promise<void>;
   updateKeyResult: (objectiveId: string, krId: string, input: UpdateKeyResultInput) => Promise<void>;
   deleteKeyResult: (objectiveId: string, krId: string) => Promise<void>;
+  reorderKeyResults: (objectiveId: string, fromIndex: number, toIndex: number) => Promise<void>;
 }
 
 // Per-KR request counter for last-write-wins semantics. Each in-flight
@@ -140,5 +141,31 @@ export const useOkrStore = create<OkrState>((set, get) => ({
         o.id === objectiveId ? { ...o, keyResults: o.keyResults.filter((k) => k.id !== krId) } : o
       ),
     }));
+  },
+
+  reorderKeyResults: async (objectiveId, fromIndex, toIndex) => {
+    const objective = get().objectives.find((o) => o.id === objectiveId);
+    if (!objective) return;
+    const keyResults = [...objective.keyResults];
+    if (fromIndex < 0 || fromIndex >= keyResults.length || toIndex < 0 || toIndex >= keyResults.length) return;
+
+    const [moved] = keyResults.splice(fromIndex, 1);
+    keyResults.splice(toIndex, 0, moved);
+    const reorderedIds = keyResults.map((k) => k.id);
+
+    // Optimistic update
+    set((s) => ({
+      objectives: s.objectives.map((o) =>
+        o.id === objectiveId ? { ...o, keyResults } : o
+      ),
+    }));
+
+    try {
+      await okrsApi.reorderKeyResults(objectiveId, reorderedIds);
+    } catch (e) {
+      set({ error: (e as Error).message });
+      // Rollback on error by refetching
+      get().fetchObjectives();
+    }
   },
 }));

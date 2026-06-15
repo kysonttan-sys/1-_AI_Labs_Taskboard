@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, CalendarDays, BarChart3, Users } from 'lucid
 import { format } from 'date-fns';
 import { useCalendarStore } from '@/features/calendar/calendarStore';
 import { useBoardStore } from '@/features/board/boardStore';
+import { useOkrStore } from '@/features/okrs/okrStore';
 import CalendarMonthView from '@/components/calendar/CalendarMonthView';
 import GanttChartView from '@/components/calendar/GanttChart';
 import TeamMeeting from '@/components/meeting/TeamMeeting';
@@ -12,14 +13,16 @@ import TeamMeeting from '@/components/meeting/TeamMeeting';
 export default function CalendarPage() {
   const { view, currentDate, setView, goToPrevMonth, goToNextMonth } = useCalendarStore();
   const { fetchBoards, fetchAllBoardsData } = useBoardStore();
+  const { objectives, fetchObjectives } = useOkrStore();
 
   useEffect(() => {
     async function load() {
       await fetchBoards();
       await fetchAllBoardsData();
+      await fetchObjectives();
     }
     load();
-  }, [fetchBoards, fetchAllBoardsData]);
+  }, [fetchBoards, fetchAllBoardsData, fetchObjectives]);
 
   return (
     <div className="flex flex-col h-full">
@@ -89,7 +92,7 @@ export default function CalendarPage() {
       {/* Content */}
       <div className="flex-1 min-h-0">
         {view === 'month' && <CalendarMonthView />}
-        {view === 'gantt' && <GanttChartView />}
+        {view === 'gantt' && <GanttChartView objectives={objectives} />}
         {view === 'meeting' && <TeamMeeting />}
       </div>
     </div>

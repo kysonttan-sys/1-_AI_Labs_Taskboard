@@ -82,4 +82,10 @@ export const okrsApi = {
     fetch(`/api/okrs/${objectiveId}/key-results/${krId}`, { method: 'DELETE' }).then(
       (r) => handle<{ ok: true }>(r)
     ),
+  reorderKeyResults: (objectiveId: string, krIds: string[]) =>
+    fetch(`/api/okrs/${objectiveId}/key-results/reorder`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ krIds }),
+    }).then((r) => handle<KeyResult[]>(r)),
 };

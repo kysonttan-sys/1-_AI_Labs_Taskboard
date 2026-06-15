@@ -88,8 +88,8 @@ export default function ObjectiveCard({ objective, overallPct }: Props) {
       </div>
 
       <div>
-        {objective.keyResults.map((kr) => (
-          <KeyResultRow key={kr.id} objectiveId={objective.id} kr={kr} />
+        {objective.keyResults.map((kr, i) => (
+          <KeyResultRow key={kr.id} objectiveId={objective.id} kr={kr} index={i} total={objective.keyResults.length} />
         ))}
       </div>
 
