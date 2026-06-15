@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, BarChart3 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, BarChart3, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCalendarStore } from '@/features/calendar/calendarStore';
 import { useBoardStore } from '@/features/board/boardStore';
 import CalendarMonthView from '@/components/calendar/CalendarMonthView';
 import GanttChartView from '@/components/calendar/GanttChart';
+import TeamMeeting from '@/components/meeting/TeamMeeting';
 
 export default function CalendarPage() {
   const { view, currentDate, setView, goToPrevMonth, goToNextMonth } = useCalendarStore();
@@ -26,23 +27,25 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold text-[var(--text-primary)]">Calendar</h1>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={goToPrevMonth}
-              className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-sm font-medium text-[var(--text-secondary)] min-w-[140px] text-center">
-              {format(currentDate, 'MMMM yyyy')}
-            </span>
-            <button
-              onClick={goToNextMonth}
-              className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+          {view !== 'meeting' && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={goToPrevMonth}
+                className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-sm font-medium text-[var(--text-secondary)] min-w-[140px] text-center">
+                {format(currentDate, 'MMMM yyyy')}
+              </span>
+              <button
+                onClick={goToNextMonth}
+                className="p-1.5 rounded-md hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* View toggle */}
@@ -69,12 +72,25 @@ export default function CalendarPage() {
             <BarChart3 className="h-3.5 w-3.5" />
             Gantt
           </button>
+          <button
+            onClick={() => setView('meeting')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors
+              ${view === 'meeting'
+                ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+              }`}
+          >
+            <Users className="h-3.5 w-3.5" />
+            Meeting
+          </button>
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 min-h-0">
-        {view === 'month' ? <CalendarMonthView /> : <GanttChartView />}
+        {view === 'month' && <CalendarMonthView />}
+        {view === 'gantt' && <GanttChartView />}
+        {view === 'meeting' && <TeamMeeting />}
       </div>
     </div>
   );

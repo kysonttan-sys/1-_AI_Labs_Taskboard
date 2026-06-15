@@ -3,11 +3,11 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 import type { CalendarEvent } from '@/types';
 
 interface CalendarState {
-  view: 'month' | 'gantt';
+  view: 'month' | 'gantt' | 'meeting';
   currentDate: Date;
   selectedDate: Date | null;
   events: CalendarEvent[];
-  setView: (view: 'month' | 'gantt') => void;
+  setView: (view: 'month' | 'gantt' | 'meeting') => void;
   setCurrentDate: (date: Date) => void;
   setSelectedDate: (date: Date | null) => void;
   goToPrevMonth: () => void;

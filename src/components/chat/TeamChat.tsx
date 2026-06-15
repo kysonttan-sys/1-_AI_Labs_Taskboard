@@ -3,9 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, X, AtSign, Reply } from 'lucide-react';
 import { useChatStore } from '@/features/chat/chatStore';
-import { useAuthStore } from '@/features/auth/authStore';
 import { getInitials } from '@/lib/utils/initials';
-import WalkieTalkie from '@/components/walkie/WalkieTalkie';
 
 interface UserOption {
   id: string;
@@ -19,7 +17,6 @@ interface TeamChatProps {
 
 export default function TeamChat({ boardId }: TeamChatProps) {
   const { messages, isOpen, toggleOpen, fetchMessages, sendMessage, startPolling, stopPolling } = useChatStore();
-  const { user } = useAuthStore();
   const [input, setInput] = useState('');
   const [users, setUsers] = useState<UserOption[]>([]);
   const [mentionIndex, setMentionIndex] = useState(-1);
@@ -195,7 +192,6 @@ export default function TeamChat({ boardId }: TeamChatProps) {
             </button>
           </div>
 
-          <WalkieTalkie boardId={boardId} userId={user?.id || ''} userName={user?.name || 'User'} />
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">
@@ -305,8 +301,6 @@ export default function TeamChat({ boardId }: TeamChatProps) {
             <X className="h-4 w-4" />
           </button>
         </div>
-
-        <WalkieTalkie boardId={boardId} userId={user?.id || ''} userName={user?.name || 'User'} />
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">

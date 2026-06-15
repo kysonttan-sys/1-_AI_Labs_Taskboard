@@ -53,12 +53,14 @@ const port = Number.isNaN(parsedPort) ? 3000 : parsedPort;
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-interface RoomState {
-  currentSpeaker: string | null;
-  speakerName: string | null;
+interface MeetingParticipant {
+  userId: string;
+  userName: string;
+  muted: boolean;
+  screenSharing: boolean;
 }
 
-const roomStates = new Map<string, RoomState>();
+const meetingRooms = new Map<string, Map<string, MeetingParticipant>>();
 
 app.prepare()
   .then(() => {
@@ -84,6 +86,16 @@ app.prepare()
     pingTimeout: 5000,
   });
 
+  function getMeetingParticipants(room: string): (MeetingParticipant & { socketId: string })[] {
+    const participants = meetingRooms.get(room);
+    if (!participants) return [];
+    return Array.from(participants.entries()).map(([socketId, p]) => ({ socketId, ...p }));
+  }
+
+  function broadcastParticipants(room: string) {
+    io.to(room).emit('meeting-participants', getMeetingParticipants(room));
+  }
+
   io.use((socket, next) => {
     try {
       const cookie = socket.handshake.headers.cookie || '';
@@ -103,109 +115,85 @@ app.prepare()
   io.on('connection', (socket) => {
     const userId = (socket as any).userId as string;
     const userName = (socket as any).userName as string;
-    let currentRoom: string | null = null;
+    let currentMeeting: string | null = null;
 
-    socket.on('join-room', (boardId: string) => {
-      const room = `board:${boardId}`;
-      if (currentRoom && currentRoom !== room) {
-        socket.leave(currentRoom);
+    socket.on('join-meeting', (room: string) => {
+      if (currentMeeting && currentMeeting !== room) {
+        socket.leave(currentMeeting);
+        const prevRoom = meetingRooms.get(currentMeeting);
+        if (prevRoom) {
+          prevRoom.delete(socket.id);
+          if (prevRoom.size === 0) meetingRooms.delete(currentMeeting);
+          broadcastParticipants(currentMeeting);
+        }
       }
-      currentRoom = room;
+
+      currentMeeting = room;
       socket.join(room);
 
-      socket.to(room).emit('user-joined', { userId, userName, socketId: socket.id });
+      if (!meetingRooms.has(room)) meetingRooms.set(room, new Map());
+      meetingRooms.get(room)!.set(socket.id, { userId, userName, muted: true, screenSharing: false });
 
-      const state = roomStates.get(room);
-      if (state?.currentSpeaker) {
-        socket.emit('user-talking', { userId: state.currentSpeaker, userName: state.speakerName });
-      }
+      broadcastParticipants(room);
 
-      const sockets = io.sockets.adapter.rooms.get(room);
-      if (sockets) {
-        const peers: { socketId: string; userId: string; userName: string }[] = [];
-        Array.from(sockets).forEach((sid) => {
-          if (sid === socket.id) return;
-          const peer = io.sockets.sockets.get(sid);
-          if (peer) {
-            peers.push({ socketId: sid, userId: (peer as any).userId, userName: (peer as any).userName });
-          }
-        });
-        socket.emit('room-peers', peers);
-      }
+      socket.to(room).emit('user-joined-meeting', { socketId: socket.id, userId, userName });
     });
 
-    socket.on('leave-room', () => {
-      if (currentRoom) {
-        socket.leave(currentRoom);
-        const state = roomStates.get(currentRoom);
-        if (state?.currentSpeaker === userId) {
-          state.currentSpeaker = null;
-          state.speakerName = null;
-          io.to(currentRoom).emit('user-stopped', { userId });
-        }
-        io.to(currentRoom).emit('user-left', { userId, socketId: socket.id });
+    socket.on('leave-meeting', () => {
+      if (!currentMeeting) return;
+      socket.leave(currentMeeting);
+      const room = meetingRooms.get(currentMeeting);
+      if (room) {
+        room.delete(socket.id);
+        if (room.size === 0) meetingRooms.delete(currentMeeting);
+        broadcastParticipants(currentMeeting);
+      }
+      socket.to(currentMeeting).emit('user-left-meeting', { socketId: socket.id, userId });
+      currentMeeting = null;
+    });
 
-        const remaining = io.sockets.adapter.rooms.get(currentRoom);
-        if (!remaining || remaining.size === 0) {
-          roomStates.delete(currentRoom);
-        }
-        currentRoom = null;
+    socket.on('meeting-toggle-mute', ({ muted }: { muted: boolean }) => {
+      if (!currentMeeting) return;
+      const room = meetingRooms.get(currentMeeting);
+      const participant = room?.get(socket.id);
+      if (participant) {
+        participant.muted = muted;
+        broadcastParticipants(currentMeeting);
       }
     });
 
-    socket.on('request-talk', (boardId: string, callback: (approved: boolean) => void) => {
-      const room = `board:${boardId}`;
-      if (!roomStates.has(room)) roomStates.set(room, { currentSpeaker: null, speakerName: null });
-      const state = roomStates.get(room)!;
-
-      if (state.currentSpeaker && state.currentSpeaker !== userId) {
-        callback(false);
-        return;
-      }
-
-      state.currentSpeaker = userId;
-      state.speakerName = userName;
-      socket.to(room).emit('user-talking', { userId, userName });
-      callback(true);
-    });
-
-    socket.on('stop-talking', (boardId: string) => {
-      const room = `board:${boardId}`;
-      const state = roomStates.get(room);
-      if (state?.currentSpeaker === userId) {
-        state.currentSpeaker = null;
-        state.speakerName = null;
-        io.to(room).emit('user-stopped', { userId });
+    socket.on('meeting-screen-share', ({ screenSharing }: { screenSharing: boolean }) => {
+      if (!currentMeeting) return;
+      const room = meetingRooms.get(currentMeeting);
+      const participant = room?.get(socket.id);
+      if (participant) {
+        participant.screenSharing = screenSharing;
+        broadcastParticipants(currentMeeting);
       }
     });
 
-    socket.on('offer', ({ targetId, offer }: { targetId: string; offer: RTCSessionDescriptionInit }) => {
-      io.to(targetId).emit('offer', { senderId: socket.id, senderName: userName, offer });
+    socket.on('meeting-offer', ({ targetId, offer, kind }: { targetId: string; offer: RTCSessionDescriptionInit; kind: 'audio' | 'screen' }) => {
+      io.to(targetId).emit('meeting-offer', { senderId: socket.id, senderName: userName, offer, kind });
     });
 
-    socket.on('answer', ({ targetId, answer }: { targetId: string; answer: RTCSessionDescriptionInit }) => {
-      io.to(targetId).emit('answer', { senderId: socket.id, answer });
+    socket.on('meeting-answer', ({ targetId, answer, kind }: { targetId: string; answer: RTCSessionDescriptionInit; kind: 'audio' | 'screen' }) => {
+      io.to(targetId).emit('meeting-answer', { senderId: socket.id, answer, kind });
     });
 
-    socket.on('ice-candidate', ({ targetId, candidate }: { targetId: string; candidate: RTCIceCandidateInit }) => {
-      io.to(targetId).emit('ice-candidate', { senderId: socket.id, candidate });
+    socket.on('meeting-ice-candidate', ({ targetId, candidate, kind }: { targetId: string; candidate: RTCIceCandidateInit; kind: 'audio' | 'screen' }) => {
+      io.to(targetId).emit('meeting-ice-candidate', { senderId: socket.id, candidate, kind });
     });
 
     socket.on('disconnect', () => {
-      if (currentRoom) {
-        const state = roomStates.get(currentRoom);
-        if (state?.currentSpeaker === userId) {
-          state.currentSpeaker = null;
-          state.speakerName = null;
-          io.to(currentRoom).emit('user-stopped', { userId });
-        }
-        io.to(currentRoom).emit('user-left', { userId, socketId: socket.id });
-
-        const remaining = io.sockets.adapter.rooms.get(currentRoom);
-        if (!remaining || remaining.size === 0) {
-          roomStates.delete(currentRoom);
-        }
+      if (!currentMeeting) return;
+      socket.leave(currentMeeting);
+      const room = meetingRooms.get(currentMeeting);
+      if (room) {
+        room.delete(socket.id);
+        if (room.size === 0) meetingRooms.delete(currentMeeting);
+        broadcastParticipants(currentMeeting);
       }
+      socket.to(currentMeeting).emit('user-left-meeting', { socketId: socket.id, userId });
     });
   });
 
