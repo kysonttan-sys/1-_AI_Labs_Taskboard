@@ -33,6 +33,7 @@ export async function GET(
               },
               checklist: true,
               keyResults: { include: { keyResult: true } },
+              dependsOn: { include: { dependsOnCard: true } },
             },
           },
         },

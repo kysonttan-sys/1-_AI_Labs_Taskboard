@@ -36,6 +36,9 @@ export async function GET(
       keyResults: {
         include: { keyResult: true },
       },
+      dependsOn: {
+        include: { dependsOnCard: true },
+      },
     },
   });
 
@@ -119,6 +122,7 @@ export async function PATCH(
         checklist: { orderBy: { position: 'asc' } },
         comments: { include: { author: true }, orderBy: { createdAt: 'asc' } },
         keyResults: { include: { keyResult: true } },
+        dependsOn: { include: { dependsOnCard: true } },
       },
     });
 
