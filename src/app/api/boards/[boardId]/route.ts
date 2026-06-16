@@ -31,6 +31,7 @@ export async function GET(
                 select: { comments: true },
               },
               checklist: true,
+              keyResults: { include: { keyResult: true } },
             },
           },
         },

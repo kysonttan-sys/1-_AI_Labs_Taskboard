@@ -3,7 +3,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Calendar, CheckSquare, MessageSquare, CheckCircle } from 'lucide-react';
+import { Calendar, CheckSquare, MessageSquare, CheckCircle, Target } from 'lucide-react';
 import type { Card } from '@/types';
 import { getInitials } from '@/lib/utils/initials';
 import { getPriorityConfig } from '@/lib/utils/theme';
@@ -118,6 +118,13 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
           <span className="flex items-center gap-1">
             <MessageSquare className="h-3 w-3" />
             {card._count.comments}
+          </span>
+        )}
+
+        {card.keyResults && card.keyResults.length > 0 && (
+          <span className="flex items-center gap-1">
+            <Target className="h-3 w-3" />
+            {card.keyResults.length}
           </span>
         )}
 

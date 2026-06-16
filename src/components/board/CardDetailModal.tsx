@@ -13,6 +13,7 @@ import {
   MessageSquare,
   XCircle,
 } from 'lucide-react';
+import CardKeyResultLinker from './CardKeyResultLinker';
 import { useBoardStore } from '@/features/board/boardStore';
 import type { Card } from '@/types';
 import { getInitials } from '@/lib/utils/initials';
@@ -69,6 +70,13 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
   const [boardLabels, setBoardLabels] = useState<LabelOption[]>([]);
   const [selectedLabelIds, setSelectedLabelIds] = useState<Set<string>>(
     new Set((card.labels ?? []).map((l) => l.label.id))
+  );
+  const [linkedKeyResults, setLinkedKeyResults] = useState(
+    (card.keyResults ?? []).map((l) => ({
+      keyResultId: l.keyResultId,
+      weight: l.weight,
+      keyResult: l.keyResult,
+    }))
   );
   const [checklist, setChecklist] = useState(card.checklist ?? []);
   const [newCheckItem, setNewCheckItem] = useState('');
@@ -477,6 +485,14 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
               )}
             </div>
           </div>
+
+          {/* Key Results */}
+          <CardKeyResultLinker
+            cardId={card.id}
+            boardId={card.boardId}
+            linked={linkedKeyResults}
+            onChange={setLinkedKeyResults}
+          />
 
           {/* Checklist */}
           <div>
