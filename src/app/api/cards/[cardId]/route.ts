@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
 import { createNotification } from '@/lib/notifications';
 import { createActivityEvent } from '@/lib/activity';
+import { broadcastToBoard } from '@/lib/socket-server';
 import { recomputeLinkedKeyResults } from './_recompute';
 
 export async function GET(
@@ -205,6 +206,8 @@ export async function PATCH(
           metadata: { ...metadata, title: card.title },
         });
       }
+
+      broadcastToBoard(before.boardId, 'card-updated', { cardId: card.id, userId: triggerUserId });
     }
 
     return NextResponse.json(card);

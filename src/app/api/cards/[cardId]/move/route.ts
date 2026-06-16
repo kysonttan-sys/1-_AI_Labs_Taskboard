@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
 import { createNotification } from '@/lib/notifications';
 import { createActivityEvent } from '@/lib/activity';
+import { broadcastToBoard } from '@/lib/socket-server';
 
 export async function PATCH(
   request: NextRequest,
@@ -108,20 +109,21 @@ export async function PATCH(
   });
 
   // Activity event
+  const session = await getSession();
+  const triggerUserId = session?.userId;
   await createActivityEvent({
     type: 'card_moved',
-    actorId: (await getSession())?.userId,
+    actorId: triggerUserId,
     boardId: card.boardId,
     cardId,
     listId: targetListId,
     metadata: { fromListId: sourceListId, toListId: targetListId, title: card.title },
   });
 
+  broadcastToBoard(card.boardId, 'card-moved', { cardId, userId: triggerUserId });
+
   // Notify assignees if card moved to a different list
   if (!isSameList && card.assignees.length > 0) {
-    const session = await getSession();
-    const triggerUserId = session?.userId || undefined;
-
     for (const a of card.assignees) {
       if (a.userId !== triggerUserId) {
         const targetList = await prisma.list.findUnique({

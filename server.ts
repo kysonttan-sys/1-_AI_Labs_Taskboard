@@ -89,6 +89,8 @@ app.prepare()
     pingTimeout: 5000,
   });
 
+  (globalThis as any).io = io;
+
   function getMeetingParticipants(room: string): (MeetingParticipant & { socketId: string })[] {
     const participants = meetingRooms.get(room);
     if (!participants) return [];
@@ -119,6 +121,22 @@ app.prepare()
     const userId = (socket as any).userId as string;
     const userName = (socket as any).userName as string;
     let currentMeeting: string | null = null;
+    let currentBoard: string | null = null;
+
+    socket.on('join-board', (boardId: string) => {
+      if (currentBoard && currentBoard !== boardId) {
+        socket.leave(`board:${currentBoard}`);
+      }
+      currentBoard = boardId;
+      socket.join(`board:${boardId}`);
+    });
+
+    socket.on('leave-board', () => {
+      if (currentBoard) {
+        socket.leave(`board:${currentBoard}`);
+        currentBoard = null;
+      }
+    });
 
     socket.on('join-meeting', (room: string) => {
       if (currentMeeting && currentMeeting !== room) {
@@ -188,6 +206,10 @@ app.prepare()
     });
 
     socket.on('disconnect', () => {
+      if (currentBoard) {
+        socket.leave(`board:${currentBoard}`);
+        currentBoard = null;
+      }
       if (!currentMeeting) return;
       socket.leave(currentMeeting);
       const room = meetingRooms.get(currentMeeting);
