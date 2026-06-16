@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
 import { createNotification } from '@/lib/notifications';
+import { recomputeLinkedKeyResults } from './_recompute';
 
 export async function GET(
   _request: NextRequest,
@@ -30,6 +31,9 @@ export async function GET(
       },
       dependents: {
         include: { dependentCard: true },
+      },
+      keyResults: {
+        include: { keyResult: true },
       },
     },
   });
@@ -110,8 +114,11 @@ export async function PATCH(
         labels: { include: { label: true } },
         checklist: { orderBy: { position: 'asc' } },
         comments: { include: { author: true }, orderBy: { createdAt: 'asc' } },
+        keyResults: { include: { keyResult: true } },
       },
     });
+
+    await recomputeLinkedKeyResults(cardId);
 
     // Create notifications for relevant changes
     if (before) {

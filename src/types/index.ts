@@ -15,6 +15,7 @@ export interface Card {
   assignees?: { user: { id: string; name: string; color: string } }[];
   labels?: { label: { id: string; name: string; color: string } }[];
   checklist?: { id: string; text: string; checked: boolean }[];
+  keyResults?: { keyResultId: string; weight: number; keyResult: { id: string; title: string } }[];
   _count?: { comments: number };
 }
 
