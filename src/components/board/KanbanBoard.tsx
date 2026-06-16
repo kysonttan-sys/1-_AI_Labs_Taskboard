@@ -80,10 +80,12 @@ function AddListInput({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
 
 interface KanbanBoardProps {
   onCardClick: (card: Card) => void;
+  lists?: List[];
 }
 
-export default function KanbanBoard({ onCardClick }: KanbanBoardProps) {
-  const { lists, addCard, addList, moveCard, reorderLists } = useBoardStore();
+export default function KanbanBoard({ onCardClick, lists: propLists }: KanbanBoardProps) {
+  const { lists: storeLists, addCard, addList, moveCard, reorderLists } = useBoardStore();
+  const lists = propLists ?? storeLists;
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [listDragIdx, setListDragIdx] = useState<number | null>(null);
   const [listDragOverIdx, setListDragOverIdx] = useState<number | null>(null);

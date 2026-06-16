@@ -8,6 +8,7 @@ import { Columns3, Calendar, BarChart3, MoreVertical, Trash2, Pencil, ChevronDow
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import GlobalSearch from '@/components/search/GlobalSearch';
 import { getInitials } from '@/lib/utils/initials';
 
 export default function Topbar() {
@@ -152,7 +153,12 @@ export default function Topbar() {
         )}
       </div>
 
-      {/* Center: View switcher */}
+      {/* Center: Global search */}
+      <div className="hidden sm:flex flex-1 justify-center px-4">
+        <GlobalSearch />
+      </div>
+
+      {/* Right: View switcher + Notifications + Avatar */}
       <div className="hidden sm:flex items-center gap-1 bg-[var(--bg-surface)] rounded-lg p-0.5 border border-[var(--border)]">
         {views.map((view) => (
           <Link
