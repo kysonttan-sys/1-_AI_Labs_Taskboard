@@ -10,6 +10,7 @@ import CardDetailModal from '@/components/board/CardDetailModal';
 import TeamChat from '@/components/chat/TeamChat';
 import ActivityFeed from '@/components/activity/ActivityFeed';
 import BoardFilters, { makeEmptyFilters, filterCards, type BoardFiltersState } from '@/components/board/BoardFilters';
+import { getSocket } from '@/lib/socket';
 
 export default function BoardPage() {
   const params = useParams();
@@ -35,6 +36,25 @@ export default function BoardPage() {
       useChatStore.getState().setCurrentUserId(user.id);
     }
   }, [user?.id]);
+
+  // Join board socket room and refetch on remote card changes
+  useEffect(() => {
+    if (!boardId) return;
+    const socket = getSocket();
+
+    const handleMove = () => fetchBoard(boardId);
+    const handleUpdate = () => fetchBoard(boardId);
+
+    socket.emit('join-board', boardId);
+    socket.on('card-moved', handleMove);
+    socket.on('card-updated', handleUpdate);
+
+    return () => {
+      socket.emit('leave-board');
+      socket.off('card-moved', handleMove);
+      socket.off('card-updated', handleUpdate);
+    };
+  }, [boardId, fetchBoard]);
 
   // Apply filters to lists (cards only; list structure preserved)
   const filteredLists = useMemo(() => {
