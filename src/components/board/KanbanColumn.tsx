@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { Plus, MoreHorizontal, GripVertical, ChevronDown } from 'lucide-react';
 import KanbanCard from './KanbanCard';
 import { useBoardStore } from '@/features/board/boardStore';
@@ -125,11 +126,19 @@ export default function KanbanColumn({ list, onAddCard, onCardClick }: KanbanCol
   const { deleteList, updateList } = useBoardStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const parentRef = useRef<HTMLDivElement>(null);
   const isDoneColumn = list.cards.length > 0 && list.cards.every((c) => c.status === 'done');
   const sortedCards = sortCards(list.cards, isDoneColumn);
   const VISIBLE_LIMIT = 10;
   const visibleCards = showAll ? sortedCards : sortedCards.slice(0, VISIBLE_LIMIT);
   const hiddenCount = sortedCards.length - VISIBLE_LIMIT;
+
+  const virtualizer = useVirtualizer({
+    count: visibleCards.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 84,
+    overscan: 3,
+  });
 
   return (
     <div
@@ -183,18 +192,38 @@ export default function KanbanColumn({ list, onAddCard, onCardClick }: KanbanCol
       </div>
 
       {/* Cards droppable area */}
-      <div ref={setNodeRef} className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin">
+      <div
+        ref={(el) => {
+          parentRef.current = el;
+          setNodeRef(el);
+        }}
+        className="flex-1 overflow-y-auto p-2 scrollbar-thin"
+      >
         <SortableContext
           items={visibleCards.map((c) => c.id)}
           strategy={verticalListSortingStrategy}
         >
-          {visibleCards.map((card) => (
-            <KanbanCard
-              key={card.id}
-              card={card}
-              onClick={() => onCardClick(card)}
-            />
-          ))}
+          <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const card = visibleCards[virtualItem.index];
+              return (
+                <div
+                  key={card.id}
+                  data-index={virtualItem.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  <KanbanCard card={card} onClick={() => onCardClick(card)} />
+                </div>
+              );
+            })}
+          </div>
         </SortableContext>
         {hiddenCount > 0 && !showAll && (
           <button
