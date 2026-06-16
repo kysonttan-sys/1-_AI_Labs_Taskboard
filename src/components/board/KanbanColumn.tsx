@@ -192,13 +192,8 @@ export default function KanbanColumn({ list, onAddCard, onCardClick }: KanbanCol
       </div>
 
       {/* Cards droppable area */}
-      <div
-        ref={(el) => {
-          parentRef.current = el;
-          setNodeRef(el);
-        }}
-        className="flex-1 overflow-y-auto p-2 scrollbar-thin"
-      >
+      <div ref={setNodeRef} className="flex-1 overflow-y-auto p-2 scrollbar-thin">
+        <div ref={parentRef} className="relative">
         <SortableContext
           items={visibleCards.map((c) => c.id)}
           strategy={verticalListSortingStrategy}
@@ -242,6 +237,7 @@ export default function KanbanColumn({ list, onAddCard, onCardClick }: KanbanCol
             Show less
           </button>
         )}
+        </div>
       </div>
 
       {/* Add card */}
