@@ -28,8 +28,11 @@ interface MeetingState {
   error: string | null;
   socket: Socket | null;
   peerConnections: Map<string, PeerConnection>;
+  turnServers: RTCIceServer[] | null;
+  connectionState: 'unknown' | 'connected' | 'relayed' | 'failed';
 
   initSocket: () => Socket;
+  fetchTurnServers: () => Promise<void>;
   joinMeeting: (room: string) => Promise<void>;
   leaveMeeting: () => void;
   toggleMute: () => void;
@@ -50,11 +53,6 @@ interface MeetingState {
   _removePeerConnection: (key: string) => void;
 }
 
-const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }];
-
-// Buffer ICE candidates that arrive before remote description is set.
-const bufferedCandidates = new Map<RTCPeerConnection, RTCIceCandidateInit[]>();
-
 export const useMeetingStore = create<MeetingState>((set, get) => ({
   joined: false,
   room: 'team',
@@ -66,6 +64,22 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
   error: null,
   socket: null,
   peerConnections: new Map(),
+  turnServers: null,
+  connectionState: 'unknown',
+
+  fetchTurnServers: async () => {
+    if (get().turnServers) return;
+    try {
+      const res = await fetch('/api/turn-credentials');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.urls) {
+        set({ turnServers: [{ urls: data.urls, username: data.username, credential: data.credential }] });
+      }
+    } catch {
+      // ignore, fallback to STUN
+    }
+  },
 
   initSocket: () => {
     let socket = get().socket;
@@ -295,6 +309,13 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     }),
 }));
 
+function getIceServers(turnServers: RTCIceServer[] | null): RTCIceServer[] {
+  return [{ urls: 'stun:stun.l.google.com:19302' }, ...(turnServers || [])];
+}
+
+// Buffer ICE candidates that arrive before remote description is set.
+const bufferedCandidates = new Map<RTCPeerConnection, RTCIceCandidateInit[]>();
+
 async function createOfferForPeer(targetId: string, kind: 'audio' | 'screen', stream: MediaStream | null) {
   const state = useMeetingStore.getState();
   const socket = state.socket;
@@ -303,7 +324,7 @@ async function createOfferForPeer(targetId: string, kind: 'audio' | 'screen', st
   const key = `${targetId}:${kind}`;
   if (state.peerConnections.has(key)) return;
 
-  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  const pc = new RTCPeerConnection({ iceServers: getIceServers(state.turnServers) });
 
   pc.onicecandidate = (event) => {
     if (event.candidate) {
@@ -357,7 +378,7 @@ async function handleRemoteOffer(senderId: string, senderName: string, offer: RT
     state._addOrUpdateParticipant({ socketId: senderId, userId: '', userName: senderName, muted: true, screenSharing: false });
   }
 
-  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  const pc = new RTCPeerConnection({ iceServers: getIceServers(state.turnServers) });
 
   pc.onicecandidate = (event) => {
     if (event.candidate) {
