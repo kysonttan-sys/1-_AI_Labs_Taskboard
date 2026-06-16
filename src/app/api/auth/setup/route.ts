@@ -1,21 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { hashPin } from '@/lib/auth/pin';
-import { createSessionToken } from '@/lib/auth/session';
+import { createSessionToken, COOKIE_OPTIONS } from '@/lib/auth/session';
+import { isRateLimited, getRateLimitKey } from '@/lib/security/rateLimit';
+import { isNonEmptyString } from '@/lib/security/input';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    if (isRateLimited(getRateLimitKey(request, 'setup'))) {
+      return NextResponse.json(
+        { error: 'Too many setup attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { name, pin } = body;
 
-    if (!name || !pin) {
+    if (!isNonEmptyString(name) || !isNonEmptyString(pin)) {
       return NextResponse.json(
         { error: 'Name and PIN are required' },
         { status: 400 }
       );
     }
+
+    if (pin.length < 4) {
+      return NextResponse.json(
+        { error: 'PIN must be at least 4 digits' },
+        { status: 400 }
+      );
+    }
+
+    const normalizedName = name.trim().slice(0, 100);
 
     const settings = await prisma.appSettings.findUnique({
       where: { id: 'app' },
@@ -32,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.create({
       data: {
-        name,
+        name: normalizedName,
         pin: hashedPin,
         role: 'admin',
       },
@@ -60,13 +78,7 @@ export async function POST(request: NextRequest) {
       color: user.color,
     });
 
-    response.cookies.set('session', token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-      secure: process.env.NODE_ENV === 'production',
-    });
+    response.cookies.set('session', token, COOKIE_OPTIONS);
 
     return response;
   } catch {

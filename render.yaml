@@ -5,6 +5,15 @@
 # You still need to set DATABASE_URL, SESSION_SECRET, and (optional) OLLAMA_URL
 # in the service's Environment tab after first deploy. Render will auto-link
 # the Postgres service to DATABASE_URL.
+#
+# IMPORTANT: Migrations are NOT run during build to avoid pg_advisory_lock
+# timeouts on pooled connections (e.g. Neon). After first deploy, apply pending
+# migrations manually from your machine with:
+#   $env:DATABASE_URL = "<direct-connection-string>"
+#   npm run db:migrate
+# For Neon, use the "Direct" connection URL (no -pooler in the hostname).
+# You can also set MIGRATE_DATABASE_URL in Render's shell and run:
+#   npm run db:migrate
 
 services:
   - type: web
@@ -26,6 +35,9 @@ services:
         fromDatabase:
           name: taskboard-db
           property: connectionString
+      # Optional: direct connection used only for migrations (Neon users).
+      # - key: MIGRATE_DATABASE_URL
+      #   sync: false
       # Optional AI integration — see docs/ollama-tunnel.md
       # - key: OLLAMA_URL
       #   value: https://ollama.your-domain.com

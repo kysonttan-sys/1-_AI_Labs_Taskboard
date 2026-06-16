@@ -31,17 +31,20 @@ function getSecret(): string {
 
 function verifySessionToken(token: string): { userId: string; name: string; role: string } | null {
   try {
+    const SECRET = getSecret();
     const parts = token.split(':');
     if (parts.length !== 3) return null;
     const iv = Buffer.from(parts[0], 'hex');
     const authTag = Buffer.from(parts[1], 'hex');
     const encrypted = parts[2];
-    const key = crypto.createHash('sha256').update(getSecret()).digest();
+    const key = crypto.createHash('sha256').update(SECRET).digest();
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(authTag);
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    return JSON.parse(decrypted);
+    const payload = JSON.parse(decrypted) as { userId: string; name: string; role: string; exp?: number };
+    if (!payload.exp || Date.now() > payload.exp) return null;
+    return { userId: payload.userId, name: payload.name, role: payload.role };
   } catch {
     return null;
   }

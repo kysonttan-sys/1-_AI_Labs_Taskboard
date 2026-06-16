@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { hashPin } from '@/lib/auth/pin';
-import { createSessionToken } from '@/lib/auth/session';
+import { createSessionToken, COOKIE_OPTIONS } from '@/lib/auth/session';
+import { isRateLimited, getRateLimitKey } from '@/lib/security/rateLimit';
+import { isNonEmptyString } from '@/lib/security/input';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    if (isRateLimited(getRateLimitKey(request, 'register'))) {
+      return NextResponse.json(
+        { error: 'Too many registration attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const { name, pin } = await request.json();
 
-    if (!name || !pin) {
+    if (!isNonEmptyString(name) || !isNonEmptyString(pin)) {
       return NextResponse.json({ error: 'Name and PIN are required' }, { status: 400 });
     }
 
@@ -17,15 +26,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'PIN must be at least 4 digits' }, { status: 400 });
     }
 
+    const normalizedName = name.trim().slice(0, 100);
+
     // Check if name is already taken
-    const existing = await prisma.user.findFirst({ where: { name } });
+    const existing = await prisma.user.findFirst({ where: { name: normalizedName } });
     if (existing) {
       return NextResponse.json({ error: 'Name already taken' }, { status: 409 });
     }
 
     const hashedPin = await hashPin(pin);
     const user = await prisma.user.create({
-      data: { name, pin: hashedPin, role: 'member' },
+      data: { name: normalizedName, pin: hashedPin, role: 'member' },
     });
 
     // Auto-login after registration
@@ -42,13 +53,7 @@ export async function POST(request: NextRequest) {
       color: user.color,
     });
 
-    response.cookies.set('session', token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30,
-      secure: process.env.NODE_ENV === 'production',
-    });
+    response.cookies.set('session', token, COOKIE_OPTIONS);
 
     return response;
   } catch {

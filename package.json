@@ -13,6 +13,7 @@
     "db:reset": "npx prisma migrate reset --force",
     "test": "vitest run",
     "test:watch": "vitest",
+    "db:migrate": "prisma migrate deploy",
     "postinstall": "prisma generate"
   },
   "dependencies": {

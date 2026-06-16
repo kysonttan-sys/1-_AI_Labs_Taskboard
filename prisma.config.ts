@@ -9,6 +9,9 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Use MIGRATE_DATABASE_URL (direct connection) for migrations to avoid
+    // advisory-lock timeouts on pooled providers like Neon. Fall back to the
+    // regular DATABASE_URL used by the application.
+    url: process.env["MIGRATE_DATABASE_URL"] || process.env["DATABASE_URL"],
   },
 });
