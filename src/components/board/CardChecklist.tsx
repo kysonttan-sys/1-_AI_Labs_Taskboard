@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { CheckSquare, Plus, X } from 'lucide-react';
-import type { Card } from '@/types';
 
 interface ChecklistItem {
   id: string;
