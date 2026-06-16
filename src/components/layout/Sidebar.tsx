@@ -12,9 +12,11 @@ import {
   Sun,
   Moon,
   Target,
+  FolderKanban,
 } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/authStore';
 import { useBoardStore } from '@/features/board/boardStore';
+import { useProjectStore } from '@/features/projects/projectStore';
 import { getInitials } from '@/lib/utils/initials';
 import { toggleTheme } from '@/lib/utils/theme';
 
@@ -23,6 +25,7 @@ export default function Sidebar() {
   const params = useParams();
   const { user, logout } = useAuthStore();
   const { boards, fetchBoards, createBoard, setActiveBoard, reorderBoards, activeBoardId: storedActiveBoardId } = useBoardStore();
+  const { projects, fetchProjects } = useProjectStore();
   const [collapsed, setCollapsed] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
   const [isCreating, setIsCreating] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
@@ -43,13 +46,19 @@ export default function Sidebar() {
 
   useEffect(() => {
     fetchBoards();
-  }, [fetchBoards]);
+    fetchProjects();
+  }, [fetchBoards, fetchProjects]);
 
   const activeBoardId = (params?.boardId as string | undefined) || storedActiveBoardId;
 
   async function handleCreateBoard() {
     if (!newBoardName.trim()) return;
-    const board = await createBoard(newBoardName.trim());
+    const defaultProjectId = projects[0]?.id;
+    if (!defaultProjectId) {
+      alert('Create a project first before adding boards.');
+      return;
+    }
+    const board = await createBoard(newBoardName.trim(), '📋', defaultProjectId);
     setNewBoardName('');
     setIsCreating(false);
     router.push(`/board/${board.id}`);
@@ -207,6 +216,16 @@ export default function Sidebar() {
 
         {/* OKRs + Settings links */}
         <div className="border-t border-[var(--border)] px-2 py-2 shrink-0">
+          <button
+            onClick={() => router.push('/projects')}
+            className={`
+              w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors
+              text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]
+            `}
+          >
+            <FolderKanban className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Projects</span>}
+          </button>
           <button
             onClick={() => router.push('/okrs')}
             className={`

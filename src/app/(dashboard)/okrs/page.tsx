@@ -20,6 +20,7 @@ export default async function OkrsPage() {
       endDate: o.endDate.toISOString(),
       position: o.position,
       ownerId: o.ownerId,
+      projectId: o.projectId,
       createdAt: o.createdAt.toISOString(),
       updatedAt: o.updatedAt.toISOString(),
       keyResults: o.keyResults.map((kr) => ({

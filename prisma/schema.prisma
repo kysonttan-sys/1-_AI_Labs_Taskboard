@@ -26,20 +26,35 @@ model User {
   objectives             Objective[]
 }
 
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  boards     Board[]
+  objectives Objective[]
+}
+
 model Board {
   id          String   @id @default(cuid())
   name        String
   description String?
   icon        String   @default("📋")
   position    Int      @default(0)
+  projectId   String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   lists         List[]
   labels        Label[]
   cards         Card[]
   chatMessages  ChatMessage[]
   notifications Notification[]
+
+  @@index([projectId])
 }
 
 model Label {
@@ -231,13 +246,16 @@ model Objective {
   endDate     DateTime
   position    Int       @default(0)
   ownerId     String?
+  projectId   String
   owner       User?     @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   keyResults  KeyResult[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@unique([position])
   @@index([endDate])
+  @@index([projectId])
 }
 
 model KeyResult {

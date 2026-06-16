@@ -5,14 +5,34 @@ vi.mock('@/lib/auth/session', () => ({
   getSession: async () => ({ userId: 'test-user', name: 'Test', role: 'member' }),
 }));
 
+let testProjectId: string;
+
 async function cleanOkrs() {
   await prisma.keyResult.deleteMany({});
   await prisma.objective.deleteMany({});
 }
 
-beforeAll(async () => { await cleanOkrs(); });
-afterAll(async () => { await cleanOkrs(); await prisma.$disconnect(); });
-beforeEach(async () => { await cleanOkrs(); });
+async function cleanProject() {
+  await prisma.project.deleteMany({});
+}
+
+beforeAll(async () => {
+  await cleanOkrs();
+  const project = await prisma.project.create({
+    data: { name: 'Test Project' },
+  });
+  testProjectId = project.id;
+});
+
+afterAll(async () => {
+  await cleanOkrs();
+  await cleanProject();
+  await prisma.$disconnect();
+});
+
+beforeEach(async () => {
+  await cleanOkrs();
+});
 
 // Route handlers use NextRequest.json(); jsdom's Request/NextRequest don't
 // expose .json() reliably, so we pass a minimal duck-typed object.
@@ -22,7 +42,7 @@ function mockRequest(body: unknown) {
 
 async function makeObj() {
   return prisma.objective.create({
-    data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31') },
+    data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31'), projectId: testProjectId },
   });
 }
 

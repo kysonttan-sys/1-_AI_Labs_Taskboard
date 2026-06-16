@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useOkrStore } from '@/features/okrs/okrStore';
+import { useProjectStore } from '@/features/projects/projectStore';
 import { X } from 'lucide-react';
 import type { Objective as ApiObjective } from '@/lib/api/okrs';
 
@@ -19,13 +20,25 @@ function toDateInput(iso: string) {
 export default function ObjectiveCreateModal({ objective, onClose }: Props) {
   const isEdit = !!objective;
   const { createObjective, updateObjective } = useOkrStore();
+  const { projects, fetchProjects } = useProjectStore();
 
   const [title, setTitle] = useState(objective?.title ?? '');
   const [description, setDescription] = useState(objective?.description ?? '');
   const [startDate, setStartDate] = useState(toDateInput(objective?.startDate ?? new Date().toISOString()));
   const [endDate, setEndDate] = useState(toDateInput(objective?.endDate ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()));
+  const [projectId, setProjectId] = useState(objective?.projectId ?? '');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  useEffect(() => {
+    if (!projectId && projects.length > 0) {
+      setProjectId(projects[0].id);
+    }
+  }, [projects, projectId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +50,11 @@ export default function ObjectiveCreateModal({ objective, onClose }: Props) {
     }
     if (new Date(endDate) <= new Date(startDate)) {
       setError('End date must be after start date.');
+      return;
+    }
+
+    if (!projectId) {
+      setError('Please select a project.');
       return;
     }
 
@@ -55,6 +73,7 @@ export default function ObjectiveCreateModal({ objective, onClose }: Props) {
           description: description.trim() || undefined,
           startDate: new Date(startDate).toISOString(),
           endDate: new Date(endDate).toISOString(),
+          projectId,
         });
       }
       onClose();
@@ -129,6 +148,22 @@ export default function ObjectiveCreateModal({ objective, onClose }: Props) {
               />
             </div>
           </div>
+
+          {!isEdit && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[var(--text-secondary)]">Project</label>
+              <select
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+              >
+                <option value="" disabled>Select a project</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex items-center justify-end gap-2 mt-2">
             <button

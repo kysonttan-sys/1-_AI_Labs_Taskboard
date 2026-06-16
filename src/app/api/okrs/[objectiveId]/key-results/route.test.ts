@@ -5,14 +5,34 @@ vi.mock('@/lib/auth/session', () => ({
   getSession: async () => ({ userId: 'test-user', name: 'Test', role: 'member' }),
 }));
 
+let testProjectId: string;
+
 async function cleanOkrs() {
   await prisma.keyResult.deleteMany({});
   await prisma.objective.deleteMany({});
 }
 
-beforeAll(async () => { await cleanOkrs(); });
-afterAll(async () => { await cleanOkrs(); await prisma.$disconnect(); });
-beforeEach(async () => { await cleanOkrs(); });
+async function cleanProject() {
+  await prisma.project.deleteMany({});
+}
+
+beforeAll(async () => {
+  await cleanOkrs();
+  const project = await prisma.project.create({
+    data: { name: 'Test Project' },
+  });
+  testProjectId = project.id;
+});
+
+afterAll(async () => {
+  await cleanOkrs();
+  await cleanProject();
+  await prisma.$disconnect();
+});
+
+beforeEach(async () => {
+  await cleanOkrs();
+});
 
 // Route handlers use NextRequest.json(); jsdom's Request/NextRequest don't
 // expose .json() reliably, so we pass a minimal duck-typed object.
@@ -23,7 +43,7 @@ function mockRequest(body: unknown) {
 describe('POST /api/okrs/[objectiveId]/key-results', () => {
   it('creates a KR and returns 201', async () => {
     const obj = await prisma.objective.create({
-      data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31') },
+      data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31'), projectId: testProjectId },
     });
     const { POST } = await import('./route');
     const res = await POST(
@@ -40,7 +60,7 @@ describe('POST /api/okrs/[objectiveId]/key-results', () => {
 
   it('returns 400 when title is missing', async () => {
     const obj = await prisma.objective.create({
-      data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31') },
+      data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31'), projectId: testProjectId },
     });
     const { POST } = await import('./route');
     const res = await POST(
@@ -52,7 +72,7 @@ describe('POST /api/okrs/[objectiveId]/key-results', () => {
 
   it('returns 400 when target is zero or negative', async () => {
     const obj = await prisma.objective.create({
-      data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31') },
+      data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31'), projectId: testProjectId },
     });
     const { POST } = await import('./route');
     const res = await POST(
@@ -63,12 +83,8 @@ describe('POST /api/okrs/[objectiveId]/key-results', () => {
   });
 
   it('recovers from a position-collision race by retrying with a new position', async () => {
-    // The route computes MAX(position)+1 then inserts. If a concurrent
-    // writer grabs that position first, the insert fails with P2002.
-    // We simulate that by monkey-patching prisma.keyResult.create to
-    // throw P2002 exactly once; the second call uses the real create.
     const obj = await prisma.objective.create({
-      data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31') },
+      data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31'), projectId: testProjectId },
     });
 
     const realCreate = prisma.keyResult.create.bind(prisma.keyResult);
@@ -95,12 +111,12 @@ describe('POST /api/okrs/[objectiveId]/key-results', () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.title).toBe('New');
-    expect(body.position).toBe(0); // second attempt reads MAX=null, picks 0
+    expect(body.position).toBe(0);
   });
 
   it('returns 400 when current exceeds target on create', async () => {
     const obj = await prisma.objective.create({
-      data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31') },
+      data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31'), projectId: testProjectId },
     });
     const { POST } = await import('./route');
     const res = await POST(

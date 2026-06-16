@@ -18,6 +18,7 @@ export interface Objective {
   endDate: string;
   position: number;
   ownerId: string | null;
+  projectId: string;
   keyResults: KeyResult[];
   createdAt: string;
   updatedAt: string;
@@ -28,6 +29,7 @@ export type CreateObjectiveInput = {
   description?: string;
   startDate: string;
   endDate: string;
+  projectId: string;
 };
 
 export type UpdateObjectiveInput = Partial<CreateObjectiveInput>;

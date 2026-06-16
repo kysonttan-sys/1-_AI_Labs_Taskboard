@@ -61,6 +61,7 @@ function makeObj(krs: KeyResult[] = []): Objective {
     endDate: '2026-03-31T00:00:00Z',
     position: 0,
     ownerId: null,
+    projectId: 'project-1',
     keyResults: krs,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',

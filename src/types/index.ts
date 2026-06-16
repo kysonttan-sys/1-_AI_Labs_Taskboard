@@ -32,6 +32,7 @@ export interface Board {
   description: string | null;
   icon: string;
   position: number;
+  projectId: string;
 }
 
 export interface CalendarEvent {

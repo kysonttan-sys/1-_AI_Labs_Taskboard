@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { getSession } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,6 +8,8 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ boardId: string }> }
 ) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const { boardId } = await params;
 
   const board = await prisma.board.findUnique({
@@ -46,10 +49,12 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ boardId: string }> }
 ) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const { boardId } = await params;
   const body = await request.json();
 
-  const { name, description, icon, position } = body;
+  const { name, description, icon, position, projectId } = body;
 
   try {
     const board = await prisma.board.update({
@@ -59,6 +64,7 @@ export async function PATCH(
         ...(description !== undefined && { description }),
         ...(icon !== undefined && { icon }),
         ...(position !== undefined && { position }),
+        ...(projectId !== undefined && { projectId }),
       },
     });
     return NextResponse.json(board);
@@ -71,6 +77,8 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ boardId: string }> }
 ) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const { boardId } = await params;
 
   try {

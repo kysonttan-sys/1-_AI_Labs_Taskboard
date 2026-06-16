@@ -7,17 +7,28 @@ vi.mock('@/lib/auth/session', () => ({
   getSession: async () => ({ userId: 'test-user', name: 'Test', role: 'member' }),
 }));
 
+let testProjectId: string;
+
 async function cleanOkrs() {
   await prisma.keyResult.deleteMany({});
   await prisma.objective.deleteMany({});
 }
 
+async function cleanProject() {
+  await prisma.project.deleteMany({});
+}
+
 beforeAll(async () => {
   await cleanOkrs();
+  const project = await prisma.project.create({
+    data: { name: 'Test Project' },
+  });
+  testProjectId = project.id;
 });
 
 afterAll(async () => {
   await cleanOkrs();
+  await cleanProject();
   await prisma.$disconnect();
 });
 
@@ -40,6 +51,7 @@ describe('GET /api/okrs', () => {
         title: 'Test objective',
         startDate: new Date('2026-01-01'),
         endDate: new Date('2026-03-31'),
+        projectId: testProjectId,
         keyResults: { create: [{ title: 'KR 1', target: 10, current: 5 }] },
       },
     });
@@ -59,7 +71,7 @@ describe('POST /api/okrs', () => {
     const req = new Request('http://test/api/okrs', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ startDate: '2026-01-01', endDate: '2026-03-31' }),
+      body: JSON.stringify({ startDate: '2026-01-01', endDate: '2026-03-31', projectId: testProjectId }),
     });
     const res = await POST(req as any);
     expect(res.status).toBe(400);
@@ -72,7 +84,7 @@ describe('POST /api/okrs', () => {
     const req = new Request('http://test/api/okrs', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: 'Bad', startDate: '2026-03-31', endDate: '2026-01-01' }),
+      body: JSON.stringify({ title: 'Bad', startDate: '2026-03-31', endDate: '2026-01-01', projectId: testProjectId }),
     });
     const res = await POST(req as any);
     expect(res.status).toBe(400);
@@ -88,6 +100,7 @@ describe('POST /api/okrs', () => {
         description: 'Public launch',
         startDate: '2026-04-01',
         endDate: '2026-06-30',
+        projectId: testProjectId,
       }),
     });
     const res = await POST(req as any);
@@ -122,6 +135,7 @@ describe('POST /api/okrs', () => {
         title: 'Raced',
         startDate: '2026-04-01',
         endDate: '2026-06-30',
+        projectId: testProjectId,
       }),
     });
     const res = await POST(req as any);

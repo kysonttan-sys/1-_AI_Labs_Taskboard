@@ -22,6 +22,11 @@ async function main() {
     data: { name: 'Sarah', pin: await bcrypt.hash('1234', 10), role: 'member', color: '#f59e0b' },
   });
 
+  // Create default project for seeded data
+  const project = await prisma.project.create({
+    data: { name: 'OPCardX', description: 'Default project for existing boards and OKRs' },
+  });
+
   // Create demo board
   const board = await prisma.board.create({
     data: {
@@ -29,6 +34,7 @@ async function main() {
       description: 'Track our Q2 product launch',
       icon: '🚀',
       position: 0,
+      projectId: project.id,
     },
   });
 
@@ -114,7 +120,7 @@ async function main() {
 
   // Create second board
   const board2 = await prisma.board.create({
-    data: { name: 'Bug Tracker', description: 'Track and fix bugs', icon: '🐛', position: 1 },
+    data: { name: 'Bug Tracker', description: 'Track and fix bugs', icon: '🐛', position: 1, projectId: project.id },
   });
 
   const bugLabels = await Promise.all([
@@ -150,6 +156,7 @@ async function main() {
       startDate: new Date('2026-04-01'),
       endDate: new Date('2026-06-30'),
       position: 0,
+      projectId: project.id,
       keyResults: {
         create: [
           { title: 'Beta users', target: 500, current: 312, unit: 'users', position: 0 },
@@ -167,6 +174,7 @@ async function main() {
       startDate: new Date('2026-04-01'),
       endDate: new Date('2026-09-30'),
       position: 1,
+      projectId: project.id,
       keyResults: {
         create: [
           { title: 'Onboarding completion rate', target: 80, current: 64, unit: '%', position: 0 },
@@ -183,6 +191,7 @@ async function main() {
       startDate: new Date('2026-07-01'),
       endDate: new Date('2026-12-31'),
       position: 2,
+      projectId: project.id,
       keyResults: {
         create: [
           { title: 'API endpoints shipped', target: 20, current: 0, unit: 'endpoints', position: 0 },

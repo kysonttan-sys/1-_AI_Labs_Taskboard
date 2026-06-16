@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const body = await request.json();
-  const { title, description, startDate, endDate } = body;
+  const { title, description, startDate, endDate, projectId } = body;
 
   if (!title || typeof title !== 'string' || title.trim() === '') {
     return NextResponse.json({ error: 'title is required' }, { status: 400 });
@@ -36,6 +36,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'startDate and endDate are required' }, { status: 400 });
   }
 
+  if (!projectId || typeof projectId !== 'string') {
+    return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+  }
+
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) {
+    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  }
+
   const start = new Date(startDate);
   const end = new Date(endDate);
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
@@ -45,9 +54,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'endDate must be after startDate' }, { status: 400 });
   }
 
-  // Race-safe position assignment: two concurrent creates can both see the
-  // same MAX(position); the @@unique([position]) constraint on Objective
-  // surfaces this as P2002, and we recompute on the next attempt.
   for (let attempt = 0; attempt < MAX_POSITION_RETRIES; attempt++) {
     const maxPosition = await prisma.objective.aggregate({ _max: { position: true } });
     const nextPosition = (maxPosition._max.position ?? -1) + 1;
@@ -60,6 +66,7 @@ export async function POST(request: NextRequest) {
           startDate: start,
           endDate: end,
           position: nextPosition,
+          projectId,
         },
         include: { keyResults: { orderBy: { position: 'asc' } } },
       });

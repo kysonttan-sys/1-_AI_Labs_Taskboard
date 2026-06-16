@@ -7,7 +7,7 @@ interface BoardState {
   lists: List[];
   isLoading: boolean;
   fetchBoards: () => Promise<void>;
-  createBoard: (name: string, icon?: string) => Promise<Board>;
+  createBoard: (name: string, icon?: string, projectId?: string) => Promise<Board>;
   updateBoard: (id: string, data: Partial<Pick<Board, 'name' | 'icon'>>) => Promise<void>;
   deleteBoard: (id: string) => Promise<void>;
   reorderBoards: (boardIds: string[]) => Promise<void>;
@@ -44,11 +44,11 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
   },
 
-  createBoard: async (name, icon = '📋') => {
+  createBoard: async (name, icon = '📋', projectId) => {
     const res = await fetch('/api/boards', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, icon }),
+      body: JSON.stringify({ name, icon, projectId }),
     });
     const board = await res.json();
     set((s) => ({ boards: [...s.boards, board] }));
