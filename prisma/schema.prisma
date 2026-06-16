@@ -24,6 +24,7 @@ model User {
   notifications          Notification[]
   triggeredNotifications Notification[] @relation("NotificationTrigger")
   objectives             Objective[]
+  activities             ActivityEvent[]
 }
 
 model Project {
@@ -53,6 +54,7 @@ model Board {
   cards         Card[]
   chatMessages  ChatMessage[]
   notifications Notification[]
+  activities    ActivityEvent[]
 
   @@index([projectId])
 }
@@ -79,6 +81,7 @@ model List {
   updatedAt DateTime @updatedAt
 
   cards Card[]
+  activities ActivityEvent[]
 
   @@index([boardId])
 }
@@ -109,6 +112,7 @@ model Card {
   dependents    CardDependency[] @relation("DependentCard")
   notifications Notification[]
   keyResults    CardKeyResult[]
+  activities    ActivityEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -288,4 +292,23 @@ model CardKeyResult {
   @@id([cardId, keyResultId])
   @@index([keyResultId])
   @@index([cardId])
+}
+
+model ActivityEvent {
+  id        String   @id @default(cuid())
+  type      String
+  actorId   String?
+  boardId   String?
+  cardId    String?
+  listId    String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  actor User?  @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  board Board? @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  card  Card?  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  list  List?  @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, createdAt])
+  @@index([createdAt])
 }
