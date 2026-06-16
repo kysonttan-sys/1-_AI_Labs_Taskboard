@@ -108,6 +108,7 @@ model Card {
   dependsOn     CardDependency[] @relation("DependsOnCard")
   dependents    CardDependency[] @relation("DependentCard")
   notifications Notification[]
+  keyResults    CardKeyResult[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -267,9 +268,24 @@ model KeyResult {
   position    Int       @default(0)
   objectiveId String
   objective   Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  cards       CardKeyResult[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@unique([objectiveId, position])
   @@index([position])
+}
+
+model CardKeyResult {
+  cardId      String
+  keyResultId String
+  weight      Float    @default(1)
+  createdAt   DateTime @default(now())
+
+  card      Card      @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  keyResult KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, keyResultId])
+  @@index([keyResultId])
+  @@index([cardId])
 }
