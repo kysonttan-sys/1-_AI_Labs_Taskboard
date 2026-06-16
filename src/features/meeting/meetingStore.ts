@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 import { io, type Socket } from 'socket.io-client';
+import {
+  createOfferForPeer,
+  handleRemoteOffer,
+  flushBufferedCandidates,
+  bufferCandidate,
+  cleanupPeerConnection,
+} from './webrtc';
 
 export interface MeetingParticipant {
   socketId: string;
@@ -113,25 +120,34 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     });
 
     socket.on('user-joined-meeting', async ({ socketId, userId, userName }: { socketId: string; userId: string; userName: string }) => {
-      // As the joiner, we already got the full list. As an existing member, we create an offer for the new peer.
       const state = get();
       if (state.joined && socket.id !== socketId) {
         get()._addOrUpdateParticipant({ socketId, userId, userName, muted: true, screenSharing: false });
-        await createOfferForPeer(socketId, 'audio', state.localAudioStream);
+        await createOfferForPeer(socketId, 'audio', state.localAudioStream, {
+          socket,
+          turnServers: state.turnServers,
+          participants: state.participants,
+          addPeerConnection: state._addPeerConnection,
+          addOrUpdateParticipant: state._addOrUpdateParticipant,
+        });
         if (state.screenSharing && state.localScreenStream) {
-          await createOfferForPeer(socketId, 'screen', state.localScreenStream);
+          await createOfferForPeer(socketId, 'screen', state.localScreenStream, {
+            socket,
+            turnServers: state.turnServers,
+            participants: state.participants,
+            addPeerConnection: state._addPeerConnection,
+            addOrUpdateParticipant: state._addOrUpdateParticipant,
+          });
         }
       }
     });
 
     socket.on('user-left-meeting', ({ socketId }: { socketId: string }) => {
       get()._removeParticipant(socketId);
-      // Close all peer connections for this socket
       const state = get();
       for (const [key, conn] of Array.from(state.peerConnections.entries())) {
         if (conn.socketId === socketId) {
-          bufferedCandidates.delete(conn.pc);
-          conn.pc.close();
+          cleanupPeerConnection(conn.pc);
           state.peerConnections.delete(key);
         }
       }
@@ -139,7 +155,16 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     });
 
     socket.on('meeting-offer', async ({ senderId, senderName, offer, kind }: { senderId: string; senderName: string; offer: RTCSessionDescriptionInit; kind: 'audio' | 'screen' }) => {
-      await handleRemoteOffer(senderId, senderName, offer, kind);
+      const state = get();
+      await handleRemoteOffer(senderId, senderName, offer, kind, {
+        socket,
+        turnServers: state.turnServers,
+        localAudioStream: state.localAudioStream,
+        localScreenStream: state.localScreenStream,
+        participants: state.participants,
+        addPeerConnection: state._addPeerConnection,
+        addOrUpdateParticipant: state._addOrUpdateParticipant,
+      });
     });
 
     socket.on('meeting-answer', async ({ senderId, answer, kind }: { senderId: string; answer: RTCSessionDescriptionInit; kind: 'audio' | 'screen' }) => {
@@ -148,14 +173,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
       if (conn?.pc) {
         try {
           await conn.pc.setRemoteDescription(answer);
-          // Apply buffered ICE candidates
-          const buffered = bufferedCandidates.get(conn.pc);
-          if (buffered) {
-            for (const c of buffered) {
-              try { await conn.pc.addIceCandidate(new RTCIceCandidate(c)); } catch {}
-            }
-            bufferedCandidates.delete(conn.pc);
-          }
+          await flushBufferedCandidates(conn.pc);
         } catch (e) {
           console.error('[Meeting] setRemoteDescription answer failed:', e);
         }
@@ -169,9 +187,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
         if (conn.pc.remoteDescription) {
           try { await conn.pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
         } else {
-          const buffered = bufferedCandidates.get(conn.pc) || [];
-          buffered.push(candidate);
-          bufferedCandidates.set(conn.pc, buffered);
+          bufferCandidate(conn.pc, candidate);
         }
       }
     });
@@ -209,8 +225,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     const state = get();
     state.socket?.emit('leave-meeting');
     state.peerConnections.forEach((conn) => {
-      bufferedCandidates.delete(conn.pc);
-      conn.pc.close();
+      cleanupPeerConnection(conn.pc);
     });
     state.localAudioStream?.getTracks().forEach((t) => t.stop());
     state.localScreenStream?.getTracks().forEach((t) => t.stop());
@@ -238,12 +253,11 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
 
   toggleScreenShare: async () => {
     const state = get();
+    if (!state.socket) return;
     if (state.screenSharing) {
-      // Stop screen share
       state.localScreenStream?.getTracks().forEach((t) => t.stop());
       set({ localScreenStream: null, screenSharing: false });
       state.socket?.emit('meeting-screen-share', { screenSharing: false });
-      // Close screen peer connections and renegotiate? For simplicity close them and let rejoiners recreate.
       for (const [key, conn] of Array.from(state.peerConnections.entries())) {
         if (conn.kind === 'screen') {
           conn.pc.close();
@@ -264,10 +278,15 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
       set({ localScreenStream: stream, screenSharing: true });
       state.socket?.emit('meeting-screen-share', { screenSharing: true });
 
-      // Create screen offers to all peers
       for (const p of state.participants) {
         if (p.socketId === state.socket?.id) continue;
-        await createOfferForPeer(p.socketId, 'screen', stream);
+        await createOfferForPeer(p.socketId, 'screen', stream, {
+          socket: state.socket,
+          turnServers: state.turnServers,
+          participants: state.participants,
+          addPeerConnection: state._addPeerConnection,
+          addOrUpdateParticipant: state._addOrUpdateParticipant,
+        });
       }
     } catch (err) {
       console.error('[Meeting] Screen share failed:', err);
@@ -308,112 +327,3 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
       return { peerConnections: map };
     }),
 }));
-
-function getIceServers(turnServers: RTCIceServer[] | null): RTCIceServer[] {
-  return [{ urls: 'stun:stun.l.google.com:19302' }, ...(turnServers || [])];
-}
-
-// Buffer ICE candidates that arrive before remote description is set.
-const bufferedCandidates = new Map<RTCPeerConnection, RTCIceCandidateInit[]>();
-
-async function createOfferForPeer(targetId: string, kind: 'audio' | 'screen', stream: MediaStream | null) {
-  const state = useMeetingStore.getState();
-  const socket = state.socket;
-  if (!socket) return;
-
-  const key = `${targetId}:${kind}`;
-  if (state.peerConnections.has(key)) return;
-
-  const pc = new RTCPeerConnection({ iceServers: getIceServers(state.turnServers) });
-
-  pc.onicecandidate = (event) => {
-    if (event.candidate) {
-      socket.emit('meeting-ice-candidate', { targetId, candidate: event.candidate, kind });
-    }
-  };
-
-  pc.onconnectionstatechange = () => {
-    if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-      bufferedCandidates.delete(pc);
-      pc.close();
-      state._removePeerConnection(key);
-    }
-  };
-
-  if (kind === 'audio' && stream) {
-    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-  } else if (kind === 'screen' && stream) {
-    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-  }
-
-  pc.ontrack = (event) => {
-    const remoteStream = event.streams[0] || new MediaStream([event.track]);
-    state._addOrUpdateParticipant({
-      ...state.participants.find((p) => p.socketId === targetId) || { socketId: targetId, userId: '', userName: 'Unknown', muted: true, screenSharing: false },
-      ...(kind === 'audio' ? { audioStream: remoteStream } : { screenStream: remoteStream }),
-    });
-  };
-
-  state._addPeerConnection(key, { pc, socketId: targetId, kind });
-
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  socket.emit('meeting-offer', { targetId, offer, kind });
-}
-
-async function handleRemoteOffer(senderId: string, senderName: string, offer: RTCSessionDescriptionInit, kind: 'audio' | 'screen') {
-  const state = useMeetingStore.getState();
-  const socket = state.socket;
-  if (!socket) return;
-
-  const key = `${senderId}:${kind}`;
-  if (state.peerConnections.has(key)) {
-    // Existing connection, ignore duplicate offer
-    return;
-  }
-
-  // Update participant metadata
-  const existing = state.participants.find((p) => p.socketId === senderId);
-  if (!existing) {
-    state._addOrUpdateParticipant({ socketId: senderId, userId: '', userName: senderName, muted: true, screenSharing: false });
-  }
-
-  const pc = new RTCPeerConnection({ iceServers: getIceServers(state.turnServers) });
-
-  pc.onicecandidate = (event) => {
-    if (event.candidate) {
-      socket.emit('meeting-ice-candidate', { targetId: senderId, candidate: event.candidate, kind });
-    }
-  };
-
-  pc.onconnectionstatechange = () => {
-    if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-      bufferedCandidates.delete(pc);
-      pc.close();
-      state._removePeerConnection(key);
-    }
-  };
-
-  // Add our local tracks
-  if (kind === 'audio' && state.localAudioStream) {
-    state.localAudioStream.getTracks().forEach((track) => pc.addTrack(track, state.localAudioStream!));
-  } else if (kind === 'screen' && state.localScreenStream) {
-    state.localScreenStream.getTracks().forEach((track) => pc.addTrack(track, state.localScreenStream!));
-  }
-
-  pc.ontrack = (event) => {
-    const remoteStream = event.streams[0] || new MediaStream([event.track]);
-    const participant = state.participants.find((p) => p.socketId === senderId) || { socketId: senderId, userId: '', userName: senderName, muted: true, screenSharing: false };
-    state._addOrUpdateParticipant({
-      ...participant,
-      ...(kind === 'audio' ? { audioStream: remoteStream } : { screenStream: remoteStream }),
-    });
-  };
-
-  state._addPeerConnection(key, { pc, socketId: senderId, kind });
-
-  await pc.setRemoteDescription(offer);
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  socket.emit('meeting-answer', { targetId: senderId, answer, kind });
-}
