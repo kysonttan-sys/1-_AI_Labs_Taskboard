@@ -8,13 +8,11 @@ import {
   Calendar,
   User,
   Tag,
-  CheckSquare,
-  Plus,
-  MessageSquare,
-  XCircle,
 } from 'lucide-react';
 import CardKeyResultLinker from './CardKeyResultLinker';
 import CardDependencyLinker from './CardDependencyLinker';
+import CardChecklist from './CardChecklist';
+import CardComments from './CardComments';
 import { useBoardStore } from '@/features/board/boardStore';
 import type { Card } from '@/types';
 import { getInitials } from '@/lib/utils/initials';
@@ -85,11 +83,11 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
       dependsOnCard: d.dependsOnCard,
     }))
   );
-  const [checklist, setChecklist] = useState(card.checklist ?? []);
-  const [newCheckItem, setNewCheckItem] = useState('');
+  const [checklist, setChecklist] = useState(card.checklist ?? [] as { id: string; text: string; checked: boolean }[]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [comments, setComments] = useState<{ id: string; text: string; createdAt: string; author: { name: string; color: string } }[]>([]);
-  const [newComment, setNewComment] = useState('');
+  const [comments, setComments] = useState<
+    { id: string; text: string; createdAt: string; author: { name: string; color: string } }[]
+  >([]);
 
   // Fetch users for assignee dropdown
   useEffect(() => {
@@ -216,46 +214,6 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
     });
   }
 
-  // Checklist
-  function toggleCheckItem(id: string) {
-    setChecklist((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, checked: !item.checked } : item
-      )
-    );
-    fetch(`/api/checklist/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ checked: !checklist.find((i) => i.id === id)?.checked }),
-    }).catch(() => {});
-  }
-
-  function addCheckItem() {
-    if (!newCheckItem.trim()) return;
-    const text = newCheckItem.trim();
-    setNewCheckItem('');
-    fetch(`/api/cards/${card.id}/checklist`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    })
-      .then((res) => res.json())
-      .then((item) => {
-        setChecklist((prev) => [...prev, item]);
-      })
-      .catch(() => {});
-  }
-
-  function deleteCheckItem(id: string) {
-    setChecklist((prev) => prev.filter((item) => item.id !== id));
-    fetch(`/api/checklist/${id}`, { method: 'DELETE' }).catch(() => {});
-  }
-
-  function deleteComment(id: string) {
-    setComments((prev) => prev.filter((c) => c.id !== id));
-    fetch(`/api/comments/${id}`, { method: 'DELETE' }).catch(() => {});
-  }
-
   // Delete
   async function handleDelete() {
     await deleteCard(card.id);
@@ -264,7 +222,6 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
 
   // Get current list title
   const currentList = lists.find((l) => l.id === card.listId);
-  const checkedCount = checklist.filter((i) => i.checked).length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -510,152 +467,10 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
           />
 
           {/* Checklist */}
-          <div>
-            <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <CheckSquare className="h-3 w-3" />
-              Checklist
-              {checklist.length > 0 && (
-                <span className="text-[var(--text-tertiary)]">
-                  {checkedCount}/{checklist.length}
-                </span>
-              )}
-            </label>
-
-            {checklist.length > 0 && (
-              <div className="space-y-1 mb-2">
-                {checklist.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[var(--bg-card-hover)] transition-colors group"
-                  >
-                    <label className="flex items-center gap-2 flex-1 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={item.checked}
-                        onChange={() => toggleCheckItem(item.id)}
-                        className="h-3.5 w-3.5 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]/40 bg-[var(--bg-surface)]"
-                      />
-                      <span
-                        className={`text-sm ${
-                          item.checked
-                            ? 'line-through text-[var(--text-tertiary)]'
-                            : 'text-[var(--text-secondary)]'
-                        }`}
-                      >
-                        {item.text}
-                      </span>
-                    </label>
-                    <button
-                      onClick={() => deleteCheckItem(item.id)}
-                      className="p-0.5 rounded opacity-0 group-hover:opacity-100 text-[var(--text-tertiary)] hover:text-red-400 transition-all shrink-0"
-                      title="Delete item"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <input
-                value={newCheckItem}
-                onChange={(e) => setNewCheckItem(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') addCheckItem();
-                }}
-                placeholder="Add item..."
-                className="flex-1 bg-[var(--bg-surface)] border border-[var(--border)] rounded-md px-2 py-1.5 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus-ring"
-              />
-              <button
-                onClick={addCheckItem}
-                disabled={!newCheckItem.trim()}
-                className="px-2.5 py-1.5 text-xs font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:hover:bg-[var(--accent)] text-[var(--text-primary)] rounded-md transition-colors"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
+          <CardChecklist cardId={card.id} checklist={checklist} onChange={setChecklist} />
 
           {/* Comments */}
-          <div>
-            <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <MessageSquare className="h-3 w-3" />
-              Comments
-            </label>
-            {comments.length > 0 && (
-              <div className="space-y-2 mb-3">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="flex gap-2 px-2 py-1.5 rounded-md bg-[var(--bg-surface)] group">
-                    <div
-                      className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0"
-                      style={{ backgroundColor: `${comment.author?.color || '#6366f1'}22`, color: comment.author?.color || '#6366f1' }}
-                    >
-                      {getInitials(comment.author?.name)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-[var(--text-secondary)] break-words">{comment.text}</p>
-                      <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
-                        {comment.author?.name || 'Unknown'} &middot; {new Date(comment.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => deleteComment(comment.id)}
-                      className="p-0.5 rounded opacity-0 group-hover:opacity-100 text-[var(--text-tertiary)] hover:text-red-400 transition-all shrink-0 self-start mt-0.5"
-                      title="Delete comment"
-                    >
-                      <XCircle className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex gap-2">
-              <input
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newComment.trim()) {
-                    const text = newComment.trim();
-                    setNewComment('');
-                    fetch(`/api/cards/${card.id}/comments`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ text }),
-                    })
-                      .then((res) => res.json())
-                      .then((comment) => {
-                        setComments((prev) => [...prev, comment]);
-                      })
-                      .catch(() => {});
-                  }
-                }}
-                placeholder="Write a comment..."
-                className="flex-1 bg-[var(--bg-surface)] border border-[var(--border)] rounded-md px-2 py-1.5 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus-ring"
-              />
-              <button
-                onClick={() => {
-                  if (!newComment.trim()) return;
-                  const text = newComment.trim();
-                  setNewComment('');
-                  fetch(`/api/cards/${card.id}/comments`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text }),
-                  })
-                    .then((res) => res.json())
-                    .then((comment) => {
-                      setComments((prev) => [...prev, comment]);
-                    })
-                    .catch(() => {});
-                }}
-                disabled={!newComment.trim()}
-                className="px-2.5 py-1.5 text-xs font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:hover:bg-[var(--accent)] text-[var(--text-primary)] rounded-md transition-colors"
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
+          <CardComments cardId={card.id} comments={comments} onChange={setComments} />
 
           {/* Delete */}
           <div className="pt-4 border-t border-[var(--border)]">
