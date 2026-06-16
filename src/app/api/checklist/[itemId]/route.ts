@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { getSession } from '@/lib/auth/session';
+import { createActivityEvent } from '@/lib/activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +23,19 @@ export async function PATCH(
     const item = await prisma.checklistItem.update({
       where: { id: itemId },
       data: updateData,
+      include: { card: { select: { id: true, boardId: true } } },
     });
+
+    if (checked === true) {
+      const session = await getSession();
+      await createActivityEvent({
+        type: 'checklist_item_completed',
+        actorId: session?.userId,
+        boardId: item.card.boardId,
+        cardId: item.card.id,
+        metadata: { text: item.text },
+      });
+    }
 
     return NextResponse.json(item);
   } catch {

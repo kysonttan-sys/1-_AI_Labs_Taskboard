@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
 import { createNotification } from '@/lib/notifications';
+import { createActivityEvent } from '@/lib/activity';
 
 export async function PATCH(
   request: NextRequest,
@@ -104,6 +105,16 @@ export async function PATCH(
       labels: { include: { label: true } },
       checklist: { orderBy: { position: 'asc' } },
     },
+  });
+
+  // Activity event
+  await createActivityEvent({
+    type: 'card_moved',
+    actorId: (await getSession())?.userId,
+    boardId: card.boardId,
+    cardId,
+    listId: targetListId,
+    metadata: { fromListId: sourceListId, toListId: targetListId, title: card.title },
   });
 
   // Notify assignees if card moved to a different list

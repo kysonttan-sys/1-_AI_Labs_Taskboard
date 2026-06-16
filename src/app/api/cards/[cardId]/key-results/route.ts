@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { getSession } from '@/lib/auth/session';
+import { createActivityEvent } from '@/lib/activity';
 import { recomputeLinkedKeyResults } from '../_recompute';
 
 export async function POST(
@@ -25,7 +27,7 @@ export async function POST(
 
   const kr = await prisma.keyResult.findUnique({
     where: { id: keyResultId },
-    include: { objective: { select: { projectId: true } } },
+    include: { objective: { select: { projectId: true, title: true } } },
   });
   if (!kr) return NextResponse.json({ error: 'Key result not found' }, { status: 404 });
 
@@ -49,6 +51,15 @@ export async function POST(
   });
 
   await recomputeLinkedKeyResults(cardId);
+
+  const session = await getSession();
+  await createActivityEvent({
+    type: 'okr_linked',
+    actorId: session?.userId,
+    boardId: card.boardId,
+    cardId,
+    metadata: { keyResultTitle: kr.title, objectiveTitle: kr.objective.title },
+  });
 
   return NextResponse.json(link, { status: 201 });
 }

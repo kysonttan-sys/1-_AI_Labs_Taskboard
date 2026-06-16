@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
 import { createNotification } from '@/lib/notifications';
+import { createActivityEvent } from '@/lib/activity';
 
 export async function POST(
   request: NextRequest,
@@ -53,6 +54,14 @@ export async function POST(
         });
       }
     }
+
+    await createActivityEvent({
+      type: 'comment_added',
+      actorId: session.userId,
+      boardId: card.boardId,
+      cardId: card.id,
+      metadata: { text: text.trim().substring(0, 200) },
+    });
 
     return NextResponse.json(comment, { status: 201 });
   } catch {

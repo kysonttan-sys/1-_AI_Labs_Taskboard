@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
+import { createActivityEvent } from '@/lib/activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +59,7 @@ export async function PATCH(
   const { name, description, icon, position, projectId } = body;
 
   try {
+    const before = await prisma.board.findUnique({ where: { id: boardId } });
     const board = await prisma.board.update({
       where: { id: boardId },
       data: {
@@ -68,6 +70,14 @@ export async function PATCH(
         ...(projectId !== undefined && { projectId }),
       },
     });
+    if (name !== undefined && name !== before?.name) {
+      await createActivityEvent({
+        type: 'board_renamed',
+        actorId: session.userId,
+        boardId,
+        metadata: { from: before?.name, to: board.name },
+      });
+    }
     return NextResponse.json(board);
   } catch {
     return NextResponse.json({ error: 'Board not found' }, { status: 404 });

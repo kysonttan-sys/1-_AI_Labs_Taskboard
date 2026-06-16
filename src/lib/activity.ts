@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/client';
+import type { Prisma } from '@/generated/prisma/client';
 
 export type ActivityEventType =
   | 'card_created'
@@ -19,12 +20,21 @@ interface CreateActivityParams {
   boardId?: string;
   cardId?: string;
   listId?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue;
 }
 
 export async function createActivityEvent(params: CreateActivityParams) {
   try {
-    return await prisma.activityEvent.create({ data: params });
+    return await prisma.activityEvent.create({
+      data: {
+        type: params.type,
+        actorId: params.actorId,
+        boardId: params.boardId,
+        cardId: params.cardId,
+        listId: params.listId,
+        metadata: params.metadata,
+      },
+    });
   } catch (err) {
     console.error('Failed to create activity event:', err);
     return null;

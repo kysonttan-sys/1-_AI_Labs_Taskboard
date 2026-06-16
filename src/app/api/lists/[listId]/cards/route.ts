@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { getSession } from '@/lib/auth/session';
+import { createActivityEvent } from '@/lib/activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +56,16 @@ export async function POST(
       _count: { select: { comments: true } },
       checklist: true,
     },
+  });
+
+  const session = await getSession();
+  await createActivityEvent({
+    type: 'card_created',
+    actorId: session?.userId,
+    boardId: card.boardId,
+    cardId: card.id,
+    listId,
+    metadata: { title: card.title },
   });
 
   return NextResponse.json(card, { status: 201 });

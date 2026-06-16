@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
 import { createNotification } from '@/lib/notifications';
+import { createActivityEvent } from '@/lib/activity';
 import { recomputeLinkedKeyResults } from './_recompute';
 
 export async function GET(
@@ -76,6 +77,9 @@ export async function PATCH(
         priority: true,
         boardId: true,
         title: true,
+        description: true,
+        progress: true,
+        listId: true,
       },
     });
 
@@ -178,6 +182,28 @@ export async function PATCH(
           }
         }
       }
+
+      // Activity event
+      const metadata: Record<string, unknown> = {};
+      if (title !== undefined && title !== before.title) metadata.title = { from: before.title, to: title };
+      if (description !== undefined && description !== before.description) metadata.description = true;
+      if (status !== undefined && status !== before.status) metadata.status = { from: before.status, to: status };
+      if (priority !== undefined && priority !== before.priority) metadata.priority = { from: before.priority, to: priority };
+      if (progress !== undefined && progress !== before.progress) metadata.progress = { from: before.progress, to: progress };
+      if (startDate !== undefined) metadata.startDate = true;
+      if (dueDate !== undefined) metadata.dueDate = true;
+      if (listId !== undefined && listId !== before.listId) metadata.listId = { from: before.listId, to: listId };
+
+      if (Object.keys(metadata).length > 0) {
+        await createActivityEvent({
+          type: listId !== undefined && listId !== before.listId ? 'card_moved' : 'card_updated',
+          actorId: triggerUserId,
+          boardId: before.boardId,
+          cardId: card.id,
+          listId: card.listId,
+          metadata: { ...metadata, title: card.title },
+        });
+      }
     }
 
     return NextResponse.json(card);
@@ -193,7 +219,21 @@ export async function DELETE(
   const { cardId } = await params;
 
   try {
+    const session = await getSession();
+    const before = await prisma.card.findUnique({
+      where: { id: cardId },
+      select: { boardId: true, title: true },
+    });
     await prisma.card.delete({ where: { id: cardId } });
+    if (before) {
+      await createActivityEvent({
+        type: 'card_deleted',
+        actorId: session?.userId,
+        boardId: before.boardId,
+        cardId,
+        metadata: { title: before.title },
+      });
+    }
     return new NextResponse(null, { status: 204 });
   } catch {
     return NextResponse.json({ error: 'Card not found' }, { status: 404 });
