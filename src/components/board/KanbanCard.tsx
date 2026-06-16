@@ -3,7 +3,7 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Calendar, CheckSquare, MessageSquare, CheckCircle, Target } from 'lucide-react';
+import { Calendar, CheckSquare, MessageSquare, CheckCircle, Target, Link2 } from 'lucide-react';
 import type { Card } from '@/types';
 import { getInitials } from '@/lib/utils/initials';
 import { getPriorityConfig } from '@/lib/utils/theme';
@@ -27,6 +27,8 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
   const config = getPriorityConfig(card.priority, isDone);
   const checkedCount = card.checklist?.filter((c) => c.checked).length ?? 0;
   const totalCount = card.checklist?.length ?? 0;
+  const blockerCount =
+    card.dependsOn?.filter((d) => d.dependsOnCard.status !== 'done' && !d.dependsOnCard.completedAt).length ?? 0;
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -125,6 +127,13 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
           <span className="flex items-center gap-1">
             <Target className="h-3 w-3" />
             {card.keyResults.length}
+          </span>
+        )}
+
+        {blockerCount > 0 && (
+          <span className="flex items-center gap-1 text-red-400">
+            <Link2 className="h-3 w-3" />
+            {blockerCount}
           </span>
         )}
 

@@ -36,9 +36,6 @@ export async function GET(
       keyResults: {
         include: { keyResult: true },
       },
-      dependsOn: {
-        include: { dependsOnCard: true },
-      },
     },
   });
 

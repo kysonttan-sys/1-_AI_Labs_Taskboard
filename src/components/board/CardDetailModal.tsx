@@ -14,6 +14,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import CardKeyResultLinker from './CardKeyResultLinker';
+import CardDependencyLinker from './CardDependencyLinker';
 import { useBoardStore } from '@/features/board/boardStore';
 import type { Card } from '@/types';
 import { getInitials } from '@/lib/utils/initials';
@@ -76,6 +77,12 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
       keyResultId: l.keyResultId,
       weight: l.weight,
       keyResult: l.keyResult,
+    }))
+  );
+  const [dependencies, setDependencies] = useState(
+    (card.dependsOn ?? []).map((d) => ({
+      dependsOnCardId: d.dependsOnCard.id,
+      dependsOnCard: d.dependsOnCard,
     }))
   );
   const [checklist, setChecklist] = useState(card.checklist ?? []);
@@ -492,6 +499,14 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
             boardId={card.boardId}
             linked={linkedKeyResults}
             onChange={setLinkedKeyResults}
+          />
+
+          {/* Dependencies */}
+          <CardDependencyLinker
+            cardId={card.id}
+            boardId={card.boardId}
+            dependencies={dependencies}
+            onChange={setDependencies}
           />
 
           {/* Checklist */}

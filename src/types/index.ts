@@ -16,6 +16,7 @@ export interface Card {
   labels?: { label: { id: string; name: string; color: string } }[];
   checklist?: { id: string; text: string; checked: boolean }[];
   keyResults?: { keyResultId: string; weight: number; keyResult: { id: string; title: string } }[];
+  dependsOn?: { dependsOnCard: { id: string; title: string; status: string; completedAt: string | null } }[];
   _count?: { comments: number };
 }
 

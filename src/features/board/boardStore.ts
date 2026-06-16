@@ -168,6 +168,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       labels: card.labels ?? [],
       checklist: card.checklist ?? [],
       keyResults: card.keyResults ?? [],
+      dependsOn: card.dependsOn ?? [],
       _count: card._count ?? { comments: 0 },
     };
     set((s) => ({
@@ -196,6 +197,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
             labels: updated.labels ?? c.labels,
             checklist: updated.checklist ?? c.checklist,
             keyResults: updated.keyResults ?? c.keyResults,
+            dependsOn: updated.dependsOn ?? c.dependsOn,
           };
         }),
       })),
