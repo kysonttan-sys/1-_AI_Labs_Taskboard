@@ -1,6 +1,7 @@
 'use client';
 
 import { CalendarDays } from 'lucide-react';
+import ActivityFeed from '@/components/activity/ActivityFeed';
 
 export default function DigestPage() {
   return (
@@ -10,12 +11,14 @@ export default function DigestPage() {
         <h1 className="text-lg font-semibold text-[var(--text-primary)]">Weekly Digest</h1>
       </div>
 
-      <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+      <div className="flex flex-col items-center justify-center py-12 gap-3 text-center mb-8">
         <p className="text-sm text-[var(--text-secondary)] font-medium">AI digest is currently unavailable</p>
         <p className="text-xs text-[var(--text-tertiary)] max-w-md">
           This feature was powered by a local Ollama instance, which is not available in this deployment.
         </p>
       </div>
+
+      <ActivityFeed showBoard limit={20} />
     </div>
   );
 }

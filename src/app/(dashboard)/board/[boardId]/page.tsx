@@ -8,6 +8,7 @@ import { useAuthStore } from '@/features/auth/authStore';
 import KanbanBoard from '@/components/board/KanbanBoard';
 import CardDetailModal from '@/components/board/CardDetailModal';
 import TeamChat from '@/components/chat/TeamChat';
+import ActivityFeed from '@/components/activity/ActivityFeed';
 import BoardFilters, { makeEmptyFilters, filterCards, type BoardFiltersState } from '@/components/board/BoardFilters';
 
 export default function BoardPage() {
@@ -79,6 +80,9 @@ export default function BoardPage() {
         <div className="flex-1 min-h-0">
           <KanbanBoard lists={filteredLists} onCardClick={(card) => setSelectedCardId(card.id)} />
         </div>
+      </div>
+      <div className="hidden xl:flex flex-col gap-4 w-80 shrink-0">
+        <ActivityFeed boardId={boardId} />
       </div>
       <div className="flex items-start gap-2 shrink-0">
         {!chatOpen && (
