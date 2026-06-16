@@ -13,6 +13,7 @@ export default function TeamMeeting() {
     muted,
     screenSharing,
     error,
+    connectionState,
     joinMeeting,
     leaveMeeting,
     toggleMute,
@@ -73,6 +74,25 @@ export default function TeamMeeting() {
           </div>
           <span className="text-sm text-[var(--text-tertiary)]">
             {participants.length} participant{participants.length !== 1 ? 's' : ''}
+          </span>
+          <span
+            className={`text-xs ${
+              connectionState === 'connected'
+                ? 'text-green-400'
+                : connectionState === 'relayed'
+                ? 'text-amber-400'
+                : connectionState === 'failed'
+                ? 'text-red-400'
+                : 'text-[var(--text-tertiary)]'
+            }`}
+          >
+            {connectionState === 'connected'
+              ? 'Direct'
+              : connectionState === 'relayed'
+              ? 'Relay'
+              : connectionState === 'failed'
+              ? 'Connection issue'
+              : 'Connecting...'}
           </span>
         </div>
 
