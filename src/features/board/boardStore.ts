@@ -22,6 +22,11 @@ interface BoardState {
   updateCard: (id: string, data: Partial<Card>) => Promise<void>;
   deleteCard: (id: string) => Promise<void>;
   moveCard: (cardId: string, targetListId: string, targetPosition: number) => Promise<void>;
+  bulkUpdateCards: (
+    operation: 'move' | 'archive' | 'delete' | 'assign' | 'label' | 'status',
+    cardIds: string[],
+    payload?: Record<string, unknown>
+  ) => Promise<void>;
 }
 
 export const useBoardStore = create<BoardState>((set, get) => ({
@@ -245,5 +250,119 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ targetListId, targetPosition }),
     });
+  },
+
+  bulkUpdateCards: async (operation, cardIds, payload) => {
+    const state = get();
+    const activeBoardId = state.activeBoardId;
+    if (!activeBoardId || cardIds.length === 0) return;
+
+    const targetListId = typeof payload?.targetListId === 'string' ? payload.targetListId : undefined;
+    const nextStatus = typeof payload?.status === 'string' ? payload.status : undefined;
+    const assigneeIds = Array.isArray(payload?.assigneeIds) ? (payload.assigneeIds as string[]) : [];
+    const appendAssignees = payload?.appendAssignees === true;
+    const labelIds = Array.isArray(payload?.labelIds) ? (payload.labelIds as string[]) : [];
+    const appendLabels = payload?.appendLabels === true;
+
+    // Optimistic update
+    set((s) => {
+      const mutateCard = (card: Card): Card => {
+        switch (operation) {
+          case 'move':
+            return targetListId ? { ...card, listId: targetListId } : card;
+          case 'archive':
+            return { ...card, status: 'done', completedAt: new Date().toISOString(), progress: 100 };
+          case 'status':
+            return nextStatus
+              ? {
+                  ...card,
+                  status: nextStatus,
+                  completedAt: nextStatus === 'done' ? new Date().toISOString() : null,
+                }
+              : card;
+          case 'assign':
+            if (assigneeIds.length === 0) return card;
+            return {
+              ...card,
+              assignees: appendAssignees
+                ? [
+                    ...(card.assignees ?? []).filter((a) => !assigneeIds.includes(a.user.id)),
+                    ...assigneeIds.map((id: string) => ({
+                      user: { id, name: '', color: '#6366f1' },
+                    })),
+                  ]
+                : assigneeIds.map((id: string) => ({
+                    user: { id, name: '', color: '#6366f1' },
+                  })),
+            };
+          case 'label':
+            if (labelIds.length === 0) return card;
+            return {
+              ...card,
+              labels: appendLabels
+                ? [
+                    ...(card.labels ?? []).filter((l) => !labelIds.includes(l.label.id)),
+                    ...labelIds.map((id: string) => ({
+                      label: { id, name: '', color: '#6366f1' },
+                    })),
+                  ]
+                : labelIds.map((id: string) => ({
+                    label: { id, name: '', color: '#6366f1' },
+                  })),
+            };
+          case 'delete':
+            return card;
+        }
+      };
+
+      if (operation === 'delete') {
+        return {
+          lists: s.lists.map((l) => ({
+            ...l,
+            cards: l.cards.filter((c) => !cardIds.includes(c.id)),
+          })),
+        };
+      }
+
+      if (operation === 'move' && targetListId) {
+        let movedCards: Card[] = [];
+        const listsWithoutCards = s.lists.map((l) => {
+          const toMove = l.cards.filter((c) => cardIds.includes(c.id));
+          if (toMove.length > 0) {
+            movedCards = [...movedCards, ...toMove.map((c) => ({ ...c, listId: targetListId }))];
+          }
+          return { ...l, cards: l.cards.filter((c) => !cardIds.includes(c.id)) };
+        });
+        const targetList = listsWithoutCards.find((l) => l.id === targetListId);
+        if (!targetList) return s;
+        const finalLists = listsWithoutCards.map((l) =>
+          l.id === targetListId ? { ...l, cards: [...l.cards, ...movedCards] } : l
+        );
+        return { lists: finalLists };
+      }
+
+      return {
+        lists: s.lists.map((l) => ({
+          ...l,
+          cards: l.cards.map((c) => (cardIds.includes(c.id) ? mutateCard(c) : c)),
+        })),
+      };
+    });
+
+    try {
+      const res = await fetch('/api/cards/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operation, cardIds, ...payload }),
+      });
+      if (!res.ok) throw new Error('Bulk operation failed');
+      const data = await res.json();
+      if (data.updated || data.deleted) {
+        await get().fetchBoard(activeBoardId);
+      }
+    } catch (err) {
+      console.error('[bulkUpdateCards] failed:', err);
+      await get().fetchBoard(activeBoardId);
+    }
   },
 }));
