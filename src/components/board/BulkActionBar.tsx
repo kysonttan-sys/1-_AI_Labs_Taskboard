@@ -29,7 +29,7 @@ interface LabelOption {
 
 export default function BulkActionBar() {
   const { lists, bulkUpdateCards } = useBoardStore();
-  const { selectedIds, clear, setIsSelecting, toggle, setSelection } = useBulkSelectionStore();
+  const { selectedIds, clear, setIsSelecting, setSelection } = useBulkSelectionStore();
   const [users, setUsers] = useState<UserOption[]>([]);
   const [labels, setLabels] = useState<LabelOption[]>([]);
 
