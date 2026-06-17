@@ -12,10 +12,12 @@ import {
   DragEndEvent,
   DragOverEvent,
 } from '@dnd-kit/core';
-import { Plus } from 'lucide-react';
+import { Plus, CheckSquare } from 'lucide-react';
 import { useBoardStore } from '@/features/board/boardStore';
+import { useBulkSelectionStore } from '@/features/board/bulkSelectionStore';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
+import BulkActionBar from './BulkActionBar';
 import type { Card, List } from '@/types';
 
 function AddListInput({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
@@ -85,6 +87,7 @@ interface KanbanBoardProps {
 
 export default function KanbanBoard({ onCardClick, lists: propLists }: KanbanBoardProps) {
   const { lists: storeLists, addCard, addList, moveCard, reorderLists } = useBoardStore();
+  const { isSelecting, setIsSelecting, clear } = useBulkSelectionStore();
   const lists = propLists ?? storeLists;
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [listDragIdx, setListDragIdx] = useState<number | null>(null);
@@ -223,33 +226,57 @@ export default function KanbanBoard({ onCardClick, lists: propLists }: KanbanBoa
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 h-full overflow-x-auto pb-4 scrollbar-thin">
-        {lists.map((list, index) => (
-          <div
-            key={list.id}
-            draggable
-            onDragStart={() => handleListDragStart(index)}
-            onDragOver={(e) => handleListDragOver(e, index)}
-            onDrop={() => {}}
-            onDragEnd={handleListDragEnd}
-            onDragLeave={() => setListDragOverIdx(null)}
-            className={`shrink-0 transition-opacity ${
-              listDragIdx === index ? 'opacity-40' : ''
-            } ${
-              listDragOverIdx === index && listDragItemRef.current !== index
-                ? 'border-l-2 border-l-emerald-500'
-                : ''
+      <div className="flex flex-col h-full">
+        {isSelecting && <BulkActionBar />}
+        <div className="flex items-center justify-between px-1 pb-2">
+          <div className="text-xs text-[var(--text-tertiary)]">
+            {lists.reduce((sum, l) => sum + l.cards.length, 0)} cards
+          </div>
+          <button
+            onClick={() => {
+              if (isSelecting) {
+                clear();
+              }
+              setIsSelecting(!isSelecting);
+            }}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+              isSelecting
+                ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                : 'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
             }`}
           >
-            <KanbanColumn
-              list={list}
-              onAddCard={addCard}
-              onCardClick={onCardClick}
-            />
-          </div>
-        ))}
+            <CheckSquare className="h-3.5 w-3.5" />
+            {isSelecting ? 'Done selecting' : 'Select'}
+          </button>
+        </div>
+        <div className="flex gap-4 flex-1 overflow-x-auto pb-4 scrollbar-thin">
+          {lists.map((list, index) => (
+            <div
+              key={list.id}
+              draggable={!isSelecting}
+              onDragStart={() => handleListDragStart(index)}
+              onDragOver={(e) => handleListDragOver(e, index)}
+              onDrop={() => {}}
+              onDragEnd={handleListDragEnd}
+              onDragLeave={() => setListDragOverIdx(null)}
+              className={`shrink-0 transition-opacity ${
+                listDragIdx === index ? 'opacity-40' : ''
+              } ${
+                listDragOverIdx === index && listDragItemRef.current !== index
+                  ? 'border-l-2 border-l-emerald-500'
+                  : ''
+              }`}
+            >
+              <KanbanColumn
+                list={list}
+                onAddCard={addCard}
+                onCardClick={onCardClick}
+              />
+            </div>
+          ))}
 
-        <AddListInput onAdd={addList} />
+          <AddListInput onAdd={addList} />
+        </div>
       </div>
 
       <DragOverlay>

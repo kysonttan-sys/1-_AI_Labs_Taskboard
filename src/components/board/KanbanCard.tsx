@@ -7,6 +7,7 @@ import { Calendar, CheckSquare, MessageSquare, CheckCircle, Target, Link2 } from
 import type { Card } from '@/types';
 import { getInitials } from '@/lib/utils/initials';
 import { getPriorityConfig } from '@/lib/utils/theme';
+import { useBulkSelectionStore } from '@/features/board/bulkSelectionStore';
 
 interface KanbanCardProps {
   card: Card;
@@ -23,6 +24,9 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
     isDragging,
   } = useSortable({ id: card.id });
 
+  const { isSelecting, selectedIds, toggle } = useBulkSelectionStore();
+  const isSelected = selectedIds.has(card.id);
+
   const isDone = card.status === 'done';
   const config = getPriorityConfig(card.priority, isDone);
   const checkedCount = card.checklist?.filter((c) => c.checked).length ?? 0;
@@ -35,7 +39,7 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
     transition,
     opacity: isDragging ? 0.4 : 1,
     backgroundColor: config.bg,
-    borderColor: 'var(--border)',
+    borderColor: isSelected ? 'var(--accent)' : 'var(--border)',
     borderRadius: 8,
     borderWidth: '1px',
     borderStyle: 'solid',
@@ -44,22 +48,51 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
     padding: 12,
   };
 
+  function handleClick(e: React.MouseEvent) {
+    if (isSelecting) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggle(card.id);
+      return;
+    }
+    onClick();
+  }
+
+  function handleCheckboxClick(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle(card.id);
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      onClick={onClick}
-      className="cursor-pointer hover:brightness-110 transition-all duration-150"
+      onClick={handleClick}
+      className={`cursor-pointer hover:brightness-110 transition-all duration-150 ${isSelected ? 'ring-1 ring-[var(--accent)]' : ''}`}
     >
-      {/* Done badge */}
-      {isDone && (
-        <div className="flex items-center gap-1 mb-1.5">
-          <CheckCircle className="h-3 w-3 text-[var(--accent)]" />
-          <span className="text-[10px] font-medium text-[var(--accent)]">Done</span>
-        </div>
-      )}
+      {/* Selection checkbox / done badge row */}
+      <div className="flex items-center justify-between mb-1.5">
+        {isSelecting ? (
+          <button
+            onClick={handleCheckboxClick}
+            className={`flex items-center justify-center h-4 w-4 rounded border text-[10px] font-medium transition-colors ${
+              isSelected
+                ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--text-primary)]'
+                : 'border-[var(--border)] text-transparent hover:border-[var(--accent)]'
+            }`}
+          >
+            {isSelected && '✓'}
+          </button>
+        ) : isDone ? (
+          <div className="flex items-center gap-1">
+            <CheckCircle className="h-3 w-3 text-[var(--accent)]" />
+            <span className="text-[10px] font-medium text-[var(--accent)]">Done</span>
+          </div>
+        ) : null}
+      </div>
 
       {/* Labels */}
       {card.labels && card.labels.length > 0 && (
