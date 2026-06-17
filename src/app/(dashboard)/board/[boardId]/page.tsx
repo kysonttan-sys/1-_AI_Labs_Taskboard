@@ -17,7 +17,7 @@ export default function BoardPage() {
   const searchParams = useSearchParams();
   const boardId = params.boardId as string;
   const cardParam = searchParams.get('card');
-  const { lists, isLoading, fetchBoard, setActiveBoard } = useBoardStore();
+  const { lists, isLoading, fetchBoard, setActiveBoard, boards } = useBoardStore();
   const { isOpen: chatOpen } = useChatStore();
   const { user } = useAuthStore();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(cardParam);
@@ -89,6 +89,24 @@ export default function BoardPage() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="h-6 w-6 rounded-md bg-[var(--accent)] animate-pulse" />
+      </div>
+    );
+  }
+
+  const boardExists = boards.length === 0 || boards.some((b) => b.id === boardId);
+  if (!boardExists) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center gap-3">
+        <div className="h-12 w-12 rounded-xl bg-[var(--bg-surface)] border border-[var(--border)] flex items-center justify-center">
+          <span className="text-2xl">📋</span>
+        </div>
+        <p className="text-[var(--text-tertiary)] text-sm">Board not found</p>
+        <button
+          onClick={() => window.location.href = '/board'}
+          className="px-4 py-2 text-sm font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] rounded-md transition-colors"
+        >
+          Go to boards
+        </button>
       </div>
     );
   }

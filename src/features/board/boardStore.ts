@@ -96,9 +96,19 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   fetchBoard: async (id) => {
     set({ isLoading: true });
-    const res = await fetch(`/api/boards/${id}`);
-    const data = await res.json();
-    set({ lists: data.lists, isLoading: false });
+    try {
+      const res = await fetch(`/api/boards/${id}`);
+      if (!res.ok) {
+        console.error(`[fetchBoard] failed: ${res.status} for board ${id}`);
+        set({ lists: [], isLoading: false });
+        return;
+      }
+      const data = await res.json();
+      set({ lists: data.lists ?? [], isLoading: false });
+    } catch (err) {
+      console.error('[fetchBoard] error:', err);
+      set({ lists: [], isLoading: false });
+    }
   },
 
   fetchAllBoardsData: async () => {

@@ -21,7 +21,7 @@ services:
     runtime: node
     plan: starter              # $7/mo — free tier sleeps and breaks Socket.io
     region: oregon             # pick whatever's nearest you
-    branch: feature/okr-foundation
+    branch: main
     buildCommand: npm install && npx prisma generate && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
