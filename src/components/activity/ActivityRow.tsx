@@ -36,8 +36,13 @@ function describeEvent(event: ActivityEvent): string {
       return `created card "${(metadata?.title as string) ?? 'Untitled'}"`;
     case 'card_updated':
       return `updated card "${(metadata?.title as string) ?? 'Untitled'}"`;
-    case 'card_moved':
-      return `moved card "${(metadata?.title as string) ?? 'Untitled'}"`;
+    case 'card_moved': {
+      const from = (metadata?.fromListTitle as string) ?? '';
+      const to = (metadata?.toListTitle as string) ?? '';
+      const statusNote = (metadata?.status as string) ? ` (status: ${metadata?.status})` : '';
+      if (from && to) return `moved card "${(metadata?.title as string) ?? 'Untitled'}" from ${from} to ${to}${statusNote}`;
+      return `moved card "${(metadata?.title as string) ?? 'Untitled'}"${statusNote}`;
+    }
     case 'card_deleted':
       return `deleted card "${(metadata?.title as string) ?? 'Untitled'}"`;
     case 'comment_added':

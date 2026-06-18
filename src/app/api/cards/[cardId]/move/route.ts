@@ -4,6 +4,7 @@ import { requireSession, requireCardAccess } from '@/lib/auth/permissions';
 import { createNotification } from '@/lib/notifications';
 import { createActivityEvent } from '@/lib/activity';
 import { broadcastToBoard } from '@/lib/socket-server';
+import { deriveStatusFromListTitle } from '@/lib/board/status';
 
 export async function PATCH(
   request: NextRequest,
@@ -43,14 +44,24 @@ export async function PATCH(
 
   const card = await prisma.card.findUnique({
     where: { id: cardId },
-    select: { id: true, listId: true, position: true, assignees: { select: { userId: true } }, boardId: true, title: true },
+    select: {
+      id: true,
+      listId: true,
+      position: true,
+      assignees: { select: { userId: true } },
+      boardId: true,
+      title: true,
+      list: { select: { title: true } },
+    },
   });
   if (!card) {
     return NextResponse.json({ error: 'Card not found' }, { status: 404 });
   }
 
   const sourceListId = card.listId;
+  const sourceListTitle = card.list?.title ?? '';
   const isSameList = sourceListId === targetListId;
+  const targetStatus = !isSameList ? deriveStatusFromListTitle(targetList.title) : null;
 
   await prisma.$transaction(async (tx) => {
     // Remove the card from its current position by shifting cards after it down
@@ -93,7 +104,12 @@ export async function PATCH(
 
       await tx.card.update({
         where: { id: cardId },
-        data: { listId: targetListId, boardId: targetList.boardId, position: targetPosition },
+        data: {
+          listId: targetListId,
+          boardId: targetList.boardId,
+          position: targetPosition,
+          ...(targetStatus ? { status: targetStatus } : {}),
+        },
       });
     }
 
@@ -136,7 +152,14 @@ export async function PATCH(
     boardId: targetList.boardId,
     cardId,
     listId: targetListId,
-    metadata: { fromListId: sourceListId, toListId: targetListId, title: card.title },
+    metadata: {
+      fromListId: sourceListId,
+      toListId: targetListId,
+      fromListTitle: sourceListTitle,
+      toListTitle: targetList.title,
+      title: card.title,
+      ...(targetStatus ? { status: targetStatus } : {}),
+    },
   });
 
   broadcastToBoard(targetList.boardId, 'card-moved', { cardId, userId: triggerUserId });

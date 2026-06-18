@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { createActivityEvent } from '@/lib/activity';
 import { requireSession, requireListAccess } from '@/lib/auth/permissions';
+import { deriveStatusFromListTitle } from '@/lib/board/status';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,12 +60,15 @@ export async function POST(
     where: { listId },
   });
 
+  const initialStatus = deriveStatusFromListTitle(list.title);
+
   const card = await prisma.card.create({
     data: {
       title,
       listId,
       boardId: list.boardId,
       position: (maxPosition._max.position ?? -1) + 1,
+      ...(initialStatus ? { status: initialStatus } : {}),
     },
     include: {
       assignees: {

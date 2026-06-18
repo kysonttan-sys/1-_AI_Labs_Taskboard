@@ -5,6 +5,7 @@ import { createNotification } from '@/lib/notifications';
 import { createActivityEvent } from '@/lib/activity';
 import { broadcastToBoard } from '@/lib/socket-server';
 import { recomputeLinkedKeyResults } from './_recompute';
+import { deriveStatusFromListTitle } from '@/lib/board/status';
 
 export async function GET(
   _request: NextRequest,
@@ -124,10 +125,23 @@ export async function PATCH(
       }
     }
 
+    let derivedStatus: string | undefined;
+    if (listId !== undefined && listId !== before.listId) {
+      const targetList = await prisma.list.findUnique({
+        where: { id: listId },
+        select: { title: true },
+      });
+      if (targetList) {
+        const mapped = deriveStatusFromListTitle(targetList.title);
+        if (mapped) derivedStatus = mapped;
+      }
+    }
+
     const updateData: Record<string, unknown> = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (status !== undefined) updateData.status = status;
+    if (derivedStatus !== undefined && status === undefined) updateData.status = derivedStatus;
     if (priority !== undefined) updateData.priority = priority;
     if (progress !== undefined) updateData.progress = progress;
     if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;

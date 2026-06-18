@@ -7,6 +7,7 @@ import { pct } from '@/features/okrs/progress';
 import ObjectiveCard from './ObjectiveCard';
 import ObjectiveCreateModal from './ObjectiveCreateModal';
 import { Plus, Target } from 'lucide-react';
+import { getSocket } from '@/lib/socket';
 
 type Objective = ApiObjective & {
   startDate: string;
@@ -21,7 +22,7 @@ interface Props {
 }
 
 export default function ObjectiveList({ initialObjectives }: Props) {
-  const { objectives, error, isLoading } = useOkrStore();
+  const { objectives, error, isLoading, fetchObjectives } = useOkrStore();
   const [modalOpen, setModalOpen] = useState(false);
 
   // Sync the store with freshly fetched SSR data whenever the prop
@@ -30,6 +31,20 @@ export default function ObjectiveList({ initialObjectives }: Props) {
   useEffect(() => {
     useOkrStore.setState({ objectives: initialObjectives });
   }, [initialObjectives]);
+
+  // Listen for real-time card changes so linked task statuses stay
+  // current while the OKR page is open (e.g. another tab or a board
+  // change broadcast by another user).
+  useEffect(() => {
+    const socket = getSocket();
+    const handleChange = () => fetchObjectives();
+    socket.on('card-updated', handleChange);
+    socket.on('card-moved', handleChange);
+    return () => {
+      socket.off('card-updated', handleChange);
+      socket.off('card-moved', handleChange);
+    };
+  }, [fetchObjectives]);
 
   // Use the store data when it has been populated (e.g. by a mutation
   // that ran after mount); fall back to the SSR initial data only if
