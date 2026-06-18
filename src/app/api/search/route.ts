@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   if (response) return response;
 
   const { searchParams } = new URL(request.url);
-  const q = searchParams.get('q')?.trim().toLowerCase();
+  const q = searchParams.get('q')?.trim();
   const boardId = searchParams.get('boardId') ?? undefined;
   const projectId = searchParams.get('projectId') ?? undefined;
 
@@ -21,17 +21,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ cards: [], objectives: [], comments: [] });
   }
 
-  let cardQuery: Promise<any[]> = Promise.resolve([]);
-  let objectiveQuery: Promise<any[]> = Promise.resolve([]);
-  let commentQuery: Promise<any[]> = Promise.resolve([]);
-
+  // Validate optional scope filters when provided
   if (boardId) {
     const boardAuth = await requireBoardAccess(session, boardId);
     if (boardAuth.response) return boardAuth.response;
+  }
 
-    cardQuery = prisma.card.findMany({
+  if (projectId) {
+    const projectAuth = await requireProjectAccess(session, projectId);
+    if (projectAuth.response) return projectAuth.response;
+  }
+
+  const [cards, objectives, comments] = await Promise.all([
+    prisma.card.findMany({
       where: {
-        boardId,
+        ...(boardId ? { boardId } : {}),
         OR: [
           { title: { contains: q, mode: 'insensitive' } },
           { description: { contains: q, mode: 'insensitive' } },
@@ -44,28 +48,10 @@ export async function GET(request: Request) {
         labels: { include: { label: true } },
       },
       take: 10,
-    });
-
-    commentQuery = prisma.comment.findMany({
+    }),
+    prisma.objective.findMany({
       where: {
-        text: { contains: q, mode: 'insensitive' },
-        card: { boardId },
-      },
-      include: {
-        card: { select: { id: true, title: true, boardId: true } },
-        author: { select: { id: true, name: true, color: true } },
-      },
-      take: 10,
-    });
-  }
-
-  if (projectId) {
-    const projectAuth = await requireProjectAccess(session, projectId);
-    if (projectAuth.response) return projectAuth.response;
-
-    objectiveQuery = prisma.objective.findMany({
-      where: {
-        projectId,
+        ...(projectId ? { projectId } : {}),
         OR: [
           { title: { contains: q, mode: 'insensitive' } },
           { description: { contains: q, mode: 'insensitive' } },
@@ -75,13 +61,18 @@ export async function GET(request: Request) {
         project: { select: { id: true, name: true } },
       },
       take: 10,
-    });
-  }
-
-  const [cards, objectives, comments] = await Promise.all([
-    cardQuery,
-    objectiveQuery,
-    commentQuery,
+    }),
+    prisma.comment.findMany({
+      where: {
+        text: { contains: q, mode: 'insensitive' },
+        ...(boardId ? { card: { boardId } } : {}),
+      },
+      include: {
+        card: { select: { id: true, title: true, boardId: true } },
+        author: { select: { id: true, name: true, color: true } },
+      },
+      take: 10,
+    }),
   ]);
 
   return NextResponse.json({ cards, objectives, comments });
