@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useOkrStore } from '@/features/okrs/okrStore';
 import { pct, formatValue } from '@/features/okrs/progress';
-import { Trash2, Pencil, Check, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, Pencil, Check, X, ChevronUp, ChevronDown, Plus } from 'lucide-react';
 import StatusBadge from '@/components/board/StatusBadge';
-import type { LinkedTask } from '@/lib/api/okrs';
+import type { LinkedTask, CreateKeyResultTaskInput } from '@/lib/api/okrs';
+import KeyResultTaskPicker from './KeyResultTaskPicker';
 
 interface Kr {
   id: string;
@@ -26,13 +27,14 @@ function formatDateRange(start: string, end: string) {
 
 interface Props {
   objectiveId: string;
+  projectId: string;
   kr: Kr;
   index: number;
   total: number;
 }
 
-export default function KeyResultRow({ objectiveId, kr, index, total }: Props) {
-  const { updateKeyResult, deleteKeyResult, reorderKeyResults } = useOkrStore();
+export default function KeyResultRow({ objectiveId, projectId, kr, index, total }: Props) {
+  const { updateKeyResult, deleteKeyResult, reorderKeyResults, addKeyResultTask } = useOkrStore();
   const [currentText, setCurrentText] = useState(String(kr.current));
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(kr.title);
@@ -40,6 +42,7 @@ export default function KeyResultRow({ objectiveId, kr, index, total }: Props) {
   const [editUnit, setEditUnit] = useState(kr.unit ?? '');
   const [editStartDate, setEditStartDate] = useState(kr.startDate.slice(0, 10));
   const [editEndDate, setEditEndDate] = useState(kr.endDate.slice(0, 10));
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -121,6 +124,16 @@ export default function KeyResultRow({ objectiveId, kr, index, total }: Props) {
   const moveDown = () => {
     if (index >= total - 1) return;
     reorderKeyResults(objectiveId, index, index + 1);
+  };
+
+  const handleCreateTask = async (input: CreateKeyResultTaskInput) => {
+    setError(null);
+    try {
+      await addKeyResultTask(objectiveId, kr.id, input);
+      setPickerOpen(false);
+    } catch (e) {
+      setError((e as Error).message);
+    }
   };
 
   const progress = pct(kr.current, kr.target);
@@ -279,7 +292,21 @@ export default function KeyResultRow({ objectiveId, kr, index, total }: Props) {
           ))}
         </div>
       )}
+      <button
+        onClick={() => setPickerOpen(true)}
+        className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 rounded text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors border border-dashed border-[var(--border)]"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Task
+      </button>
       {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+      {pickerOpen && (
+        <KeyResultTaskPicker
+          projectId={projectId}
+          onClose={() => setPickerOpen(false)}
+          onCreate={handleCreateTask}
+        />
+      )}
     </div>
   );
 }

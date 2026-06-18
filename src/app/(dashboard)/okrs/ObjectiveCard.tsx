@@ -11,6 +11,7 @@ type Objective = ApiObjective;
 
 interface Props {
   objective: Objective;
+  projectId: string;
   overallPct: number;
 }
 
@@ -19,7 +20,7 @@ function formatDateRange(start: string, end: string) {
   return `${new Date(start).toLocaleDateString('en-US', opts)} – ${new Date(end).toLocaleDateString('en-US', opts)}`;
 }
 
-export default function ObjectiveCard({ objective, overallPct }: Props) {
+export default function ObjectiveCard({ objective, projectId, overallPct }: Props) {
   const { addKeyResult, deleteObjective } = useOkrStore();
   const [editing, setEditing] = useState(false);
   const [addingKr, setAddingKr] = useState(false);
@@ -96,7 +97,7 @@ export default function ObjectiveCard({ objective, overallPct }: Props) {
 
       <div>
         {objective.keyResults.map((kr, i) => (
-          <KeyResultRow key={kr.id} objectiveId={objective.id} kr={kr} index={i} total={objective.keyResults.length} />
+          <KeyResultRow key={kr.id} objectiveId={objective.id} projectId={projectId} kr={kr} index={i} total={objective.keyResults.length} />
         ))}
       </div>
 

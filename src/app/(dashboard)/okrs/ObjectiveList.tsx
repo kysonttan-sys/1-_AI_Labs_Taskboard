@@ -83,7 +83,7 @@ export default function ObjectiveList({ initialObjectives }: Props) {
         ) : (
           <div className="space-y-4">
             {list.map((obj) => (
-              <ObjectiveCard key={obj.id} objective={obj} overallPct={overallPct(obj)} />
+              <ObjectiveCard key={obj.id} objective={obj} projectId={obj.projectId} overallPct={overallPct(obj)} />
             ))}
           </div>
         )}
