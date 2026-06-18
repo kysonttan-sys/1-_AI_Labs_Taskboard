@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const user = await prisma.user.findFirst({
+  const user = await prisma.user.findUnique({
     where: { name },
     select: { id: true, name: true, role: true, color: true },
   });
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findFirst({ where: { name } });
+    const user = await prisma.user.findUnique({ where: { name } });
 
     if (!user) {
       return NextResponse.json(

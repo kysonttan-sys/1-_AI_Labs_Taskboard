@@ -5,6 +5,7 @@ import { createSessionToken, COOKIE_OPTIONS } from '@/lib/auth/session';
 import { requireAdmin } from '@/lib/auth/permissions';
 import { isRateLimited, getRateLimitKey } from '@/lib/security/rateLimit';
 import { isNonEmptyString } from '@/lib/security/input';
+import { Prisma } from '@/generated/prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,16 +33,18 @@ export async function POST(request: NextRequest) {
 
     const normalizedName = name.trim().slice(0, 100);
 
-    // Check if name is already taken
-    const existing = await prisma.user.findFirst({ where: { name: normalizedName } });
-    if (existing) {
-      return NextResponse.json({ error: 'Name already taken' }, { status: 409 });
-    }
-
     const hashedPin = await hashPin(pin);
-    const user = await prisma.user.create({
-      data: { name: normalizedName, pin: hashedPin, role: 'member' },
-    });
+    let user;
+    try {
+      user = await prisma.user.create({
+        data: { name: normalizedName, pin: hashedPin, role: 'member' },
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        return NextResponse.json({ error: 'Name already taken' }, { status: 409 });
+      }
+      throw e;
+    }
 
     // Auto-login after registration
     const token = createSessionToken({

@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
-import { createNotification } from '@/lib/notifications';
+import { requireAdmin } from '@/lib/auth/permissions';
+import type { NotificationType } from '@/lib/notifications';
 
 export async function POST() {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
+  const { response } = await requireAdmin();
+  if (response) return response;
 
   const now = new Date();
   const approachingThreshold = new Date(now.getTime() + 24 * 60 * 60 * 1000);
@@ -27,57 +25,73 @@ export async function POST() {
     },
   });
 
-  let created = 0;
+  // Build the list of notifications we would create.
+  const pending: { type: NotificationType; userId: string; cardId: string; boardId: string; title: string; body?: string }[] = [];
 
   for (const card of cards) {
     if (!card.dueDate) continue;
-
     const dueDate = new Date(card.dueDate);
 
     for (const a of card.assignees) {
       if (dueDate < now) {
-        const existing = await prisma.notification.findFirst({
-          where: {
-            type: 'due_date_overdue',
-            userId: a.userId,
-            cardId: card.id,
-            read: false,
-          },
+        pending.push({
+          type: 'due_date_overdue',
+          userId: a.userId,
+          cardId: card.id,
+          boardId: card.boardId,
+          title: 'Task overdue',
+          body: card.title,
         });
-        if (!existing) {
-          await createNotification({
-            type: 'due_date_overdue',
-            title: 'Task overdue',
-            body: card.title,
-            userId: a.userId,
-            cardId: card.id,
-            boardId: card.boardId,
-          });
-          created++;
-        }
       } else if (dueDate <= approachingThreshold) {
-        const existing = await prisma.notification.findFirst({
-          where: {
-            type: 'due_date_approaching',
-            userId: a.userId,
-            cardId: card.id,
-            read: false,
-          },
+        pending.push({
+          type: 'due_date_approaching',
+          userId: a.userId,
+          cardId: card.id,
+          boardId: card.boardId,
+          title: 'Due date approaching',
+          body: card.title,
         });
-        if (!existing) {
-          await createNotification({
-            type: 'due_date_approaching',
-            title: 'Due date approaching',
-            body: card.title,
-            userId: a.userId,
-            cardId: card.id,
-            boardId: card.boardId,
-          });
-          created++;
-        }
       }
     }
   }
 
-  return NextResponse.json({ created });
+  if (pending.length === 0) {
+    return NextResponse.json({ created: 0 });
+  }
+
+  // Batch-check which notifications already exist (single query).
+  const existing = await prisma.notification.findMany({
+    where: {
+      OR: pending.map((p) => ({
+        type: p.type,
+        userId: p.userId,
+        cardId: p.cardId,
+        read: false,
+      })),
+    },
+    select: { type: true, userId: true, cardId: true },
+  });
+
+  const existingKeySet = new Set(existing.map((e) => `${e.type}:${e.userId}:${e.cardId}`));
+
+  const toCreate = pending.filter(
+    (p) => !existingKeySet.has(`${p.type}:${p.userId}:${p.cardId}`)
+  );
+
+  if (toCreate.length === 0) {
+    return NextResponse.json({ created: 0 });
+  }
+
+  await prisma.notification.createMany({
+    data: toCreate.map((p) => ({
+      type: p.type,
+      title: p.title,
+      body: p.body,
+      userId: p.userId,
+      cardId: p.cardId,
+      boardId: p.boardId,
+    })),
+  });
+
+  return NextResponse.json({ created: toCreate.length });
 }
