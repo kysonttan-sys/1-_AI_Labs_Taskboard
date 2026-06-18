@@ -470,14 +470,12 @@ export default function GanttChart({ objectives = [] }: Props) {
                 const isEvent = item.type === 'event';
 
                 let colors;
+                let barStyle: React.CSSProperties = {};
                 if (isObjective) {
                   colors = { bg: 'bg-purple-500/20', bar: 'bg-purple-500' };
                 } else if (isEvent) {
                   const eventColor = item.meta.color || '#10b981';
-                  colors = {
-                    bg: `bg-[${eventColor}]/20`,
-                    bar: `bg-[${eventColor}]`,
-                  };
+                  barStyle = { backgroundColor: `color-mix(in srgb, ${eventColor} 25%, transparent)` };
                 } else {
                   colors = PRIORITY_COLORS[item.meta.priority || 'low'] || PRIORITY_COLORS.low;
                 }
@@ -490,10 +488,11 @@ export default function GanttChart({ objectives = [] }: Props) {
                   >
                     <div
                       onMouseDown={(e) => handleMouseDown(e, item)}
-                      className={`absolute rounded ${colors.bg} ${colors.bar} h-6 flex items-center overflow-hidden group cursor-grab active:cursor-grabbing transition-opacity hover:opacity-90 ${isDragging ? 'opacity-80 z-20' : ''}`}
+                      className={`absolute rounded h-6 flex items-center overflow-hidden group cursor-grab active:cursor-grabbing transition-opacity hover:opacity-90 ${isDragging ? 'opacity-80 z-20' : ''} ${!isEvent ? `${colors!.bg} ${colors!.bar}` : ''}`}
                       style={{
                         left: visualLeft,
                         width: Math.max(width, dayWidth),
+                        ...barStyle,
                       }}
                       title={`${item.title}: ${format(start, 'MMM d')} – ${format(end, 'MMM d')}${isObjective ? ' (OKR)' : isEvent ? ' (Event)' : ''}`}
                     >
@@ -527,19 +526,22 @@ export default function GanttChart({ objectives = [] }: Props) {
           const isObjective = item.type === 'objective';
           const TypeIcon = TYPE_META[item.type].icon;
           let colors;
+          let cardStyle: React.CSSProperties = {};
           if (isObjective) {
             colors = { dot: '#a855f7', bg: 'bg-purple-500/20', bar: 'bg-purple-500' };
           } else if (isEvent) {
-            colors = {
-              dot: item.meta.color || '#10b981',
-              bg: 'bg-[var(--accent)]/20',
-              bar: 'bg-[var(--accent)]',
-            };
+            const eventColor = item.meta.color || '#10b981';
+            colors = { dot: eventColor, bg: '', bar: '' };
+            cardStyle = { backgroundColor: `color-mix(in srgb, ${eventColor} 12%, transparent)` };
           } else {
             colors = PRIORITY_COLORS[item.meta.priority || 'low'] || PRIORITY_COLORS.low;
           }
           return (
-            <div key={item.id} className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-3">
+            <div
+              key={item.id}
+              className={`border border-[var(--border)] rounded-lg p-3 ${!isEvent ? colors!.bg : 'bg-[var(--bg-elevated)]'}`}
+              style={cardStyle}
+            >
               <div className="flex items-center gap-2 mb-1.5">
                 <TypeIcon
                   className="h-4 w-4 shrink-0"
