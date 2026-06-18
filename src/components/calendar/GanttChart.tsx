@@ -10,6 +10,7 @@ import {
 } from 'date-fns';
 import { useCalendarStore } from '@/features/calendar/calendarStore';
 import { useBoardStore } from '@/features/board/boardStore';
+import { isCompletedStatus } from '@/lib/board/status';
 import { useOkrStore } from '@/features/okrs/okrStore';
 import { Briefcase, Target, Calendar, CheckSquare } from 'lucide-react';
 import type { Objective } from '@/lib/api/okrs';
@@ -57,9 +58,10 @@ interface GanttItem {
 
 interface Props {
   objectives?: Objective[];
+  boardIds?: string[];
 }
 
-export default function GanttChart({ objectives = [] }: Props) {
+export default function GanttChart({ objectives = [], boardIds }: Props) {
   const { currentDate, events, fetchEvents, updateEvent } = useCalendarStore();
   const { lists, activeBoardId } = useBoardStore();
   const { updateObjective } = useOkrStore();
@@ -85,13 +87,15 @@ export default function GanttChart({ objectives = [] }: Props) {
 
   const cards = useMemo(() => {
     const allCards = lists.flatMap((l) => l.cards);
-    const filtered = activeBoardId
-      ? allCards.filter((c) => c.boardId === activeBoardId)
-      : allCards;
+    const filtered = boardIds?.length
+      ? allCards.filter((c) => boardIds.includes(c.boardId))
+      : activeBoardId
+        ? allCards.filter((c) => c.boardId === activeBoardId)
+        : allCards;
     return filtered.filter(
-      (c) => c.startDate && c.dueDate && c.status !== 'done'
+      (c) => c.startDate && c.dueDate && !isCompletedStatus(c.status) && !c.completedAt
     );
-  }, [lists, activeBoardId]);
+  }, [lists, activeBoardId, boardIds]);
 
   const items: GanttItem[] = useMemo(() => {
     const result: GanttItem[] = [];

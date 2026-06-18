@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
 import { createActivityEvent } from '@/lib/activity';
+import { isCompletedStatus } from '@/lib/board/status';
 
 export async function POST(
   request: NextRequest,
@@ -97,11 +98,18 @@ export async function POST(
         finalBoardId = list.board.id;
       }
 
+      const targetList = await tx.list.findUnique({
+        where: { id: finalListId },
+        select: { title: true },
+      });
+      if (!targetList) throw new Error('List not found');
+
       const maxPosition = await tx.card.aggregate({
         _max: { position: true },
         where: { listId: finalListId },
       });
 
+      const initialStatus = targetList.title;
       const card = await tx.card.create({
         data: {
           title: title.trim(),
@@ -109,7 +117,8 @@ export async function POST(
           listId: finalListId,
           boardId: finalBoardId,
           position: (maxPosition._max.position ?? -1) + 1,
-          status: 'todo',
+          status: initialStatus,
+          completedAt: isCompletedStatus(initialStatus) ? new Date() : null,
           dueDate: due,
         },
         include: {

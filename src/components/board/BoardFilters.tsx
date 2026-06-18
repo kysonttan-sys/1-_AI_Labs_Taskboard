@@ -20,7 +20,6 @@ interface Props {
 }
 
 const PRIORITIES = ['urgent', 'high', 'medium', 'low'];
-const STATUSES = ['todo', 'in_progress', 'done'];
 
 export function makeEmptyFilters(): BoardFiltersState {
   return {
@@ -95,6 +94,16 @@ export function filterCards(cards: Card[], filters: BoardFiltersState): Card[] {
 
 export default function BoardFilters({ lists, filters, onChange }: Props) {
   const allCards = useMemo(() => lists.flatMap((l) => l.cards), [lists]);
+  const statusOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return lists
+      .map((l) => l.title)
+      .filter((title) => {
+        if (seen.has(title)) return false;
+        seen.add(title);
+        return true;
+      });
+  }, [lists]);
 
   const assigneeOptions = useMemo(() => {
     const map = new Map<string, { id: string; name: string; color: string }>();
@@ -219,7 +228,7 @@ export default function BoardFilters({ lists, filters, onChange }: Props) {
         <div className="flex flex-col gap-1">
           <span className="text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Status</span>
           <div className="flex flex-wrap gap-1">
-            {STATUSES.map((s) => (
+            {statusOptions.map((s) => (
               <button
                 key={s}
                 onClick={() => onChange({ ...filters, statuses: toggleArray(s, filters.statuses) })}
@@ -229,7 +238,7 @@ export default function BoardFilters({ lists, filters, onChange }: Props) {
                     : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] border-[var(--border)] hover:text-[var(--text-secondary)]'
                   }`}
               >
-                {s.replace('_', ' ')}
+                {s}
               </button>
             ))}
           </div>

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Card, List, Board } from '@/types';
+import { isCompletedStatus } from '@/lib/board/status';
 
 interface BoardState {
   boards: Board[];
@@ -14,6 +15,7 @@ interface BoardState {
   setActiveBoard: (id: string) => void;
   fetchBoard: (id: string) => Promise<void>;
   fetchAllBoardsData: () => Promise<void>;
+  fetchProjectBoardsData: (projectId: string) => Promise<void>;
   addList: (title: string) => Promise<void>;
   updateList: (id: string, data: Partial<Pick<List, 'title' | 'position'>>) => Promise<void>;
   deleteList: (id: string) => Promise<void>;
@@ -126,6 +128,29 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     set({ lists: allLists, isLoading: false });
   },
 
+  fetchProjectBoardsData: async (projectId) => {
+    set({ isLoading: true });
+    try {
+      const res = await fetch(`/api/projects/${projectId}/boards`);
+      if (!res.ok) {
+        set({ lists: [], isLoading: false });
+        return;
+      }
+      const projectBoards = await res.json();
+      const allLists: List[] = [];
+      for (const board of projectBoards) {
+        try {
+          const boardRes = await fetch(`/api/boards/${board.id}`);
+          const data = await boardRes.json();
+          if (data.lists) allLists.push(...data.lists);
+        } catch { /* skip failed board */ }
+      }
+      set({ lists: allLists, isLoading: false });
+    } catch {
+      set({ lists: [], isLoading: false });
+    }
+  },
+
   addList: async (title) => {
     const boardId = get().activeBoardId;
     if (!boardId) return;
@@ -139,6 +164,22 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   updateList: async (id, data) => {
+    const newTitle = data.title;
+    set((s) => ({
+      lists: s.lists.map((l) => {
+        if (l.id !== id) return l;
+        const updated = { ...l, ...data };
+        if (newTitle) {
+          updated.cards = l.cards.map((c) => ({
+            ...c,
+            status: newTitle,
+            completedAt: isCompletedStatus(newTitle) ? new Date().toISOString() : null,
+          }));
+        }
+        return updated;
+      }),
+    }));
+
     await fetch(`/api/lists/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -200,23 +241,52 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       body: JSON.stringify(data),
     });
     const updated = await res.json();
-    set((s) => ({
-      lists: s.lists.map((l) => ({
-        ...l,
-        cards: l.cards.map((c) => {
-          if (c.id !== id) return c;
+    set((s) => {
+      const prevList = s.lists.find((l) => l.cards.some((c) => c.id === id));
+      const prevListId = prevList?.id;
+      const targetListId = updated.listId as string | undefined;
+
+      const mergeCard = (base: Card): Card => ({
+        ...base,
+        ...updated,
+        assignees: updated.assignees ?? base.assignees,
+        labels: updated.labels ?? base.labels,
+        checklist: updated.checklist ?? base.checklist,
+        keyResults: updated.keyResults ?? base.keyResults,
+        dependsOn: updated.dependsOn ?? base.dependsOn,
+      });
+
+      if (prevListId && targetListId && prevListId !== targetListId) {
+        const baseCard = prevList.cards.find((c) => c.id === id);
+        if (!baseCard) {
           return {
-            ...c,
-            ...updated,
-            assignees: updated.assignees ?? c.assignees,
-            labels: updated.labels ?? c.labels,
-            checklist: updated.checklist ?? c.checklist,
-            keyResults: updated.keyResults ?? c.keyResults,
-            dependsOn: updated.dependsOn ?? c.dependsOn,
+            lists: s.lists.map((l) => ({
+              ...l,
+              cards: l.cards.map((c) => (c.id === id ? mergeCard(c) : c)),
+            })),
           };
-        }),
-      })),
-    }));
+        }
+        const movedCard = mergeCard(baseCard);
+        return {
+          lists: s.lists.map((l) => {
+            if (l.id === prevListId) {
+              return { ...l, cards: l.cards.filter((c) => c.id !== id) };
+            }
+            if (l.id === targetListId) {
+              return { ...l, cards: [...l.cards, movedCard] };
+            }
+            return l;
+          }),
+        };
+      }
+
+      return {
+        lists: s.lists.map((l) => ({
+          ...l,
+          cards: l.cards.map((c) => (c.id === id ? mergeCard(c) : c)),
+        })),
+      };
+    });
   },
 
   deleteCard: async (id) => {
@@ -232,23 +302,28 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   moveCard: async (cardId, targetListId, targetPosition) => {
     // Optimistically update local state
     set((s) => {
-      let movedCard: Card | null = null;
-      const listsWithoutCard = s.lists.map((l) => {
-        const idx = l.cards.findIndex((c) => c.id === cardId);
-        if (idx !== -1) {
-          movedCard = { ...l.cards[idx], listId: targetListId };
-          return { ...l, cards: l.cards.filter((c) => c.id !== cardId) };
-        }
-        return l;
-      });
+      const sourceList = s.lists.find((l) => l.cards.some((c) => c.id === cardId));
+      if (!sourceList) return s;
 
-      if (!movedCard) return s;
+      const cardToMove = sourceList.cards.find((c) => c.id === cardId);
+      if (!cardToMove) return s;
+
+      const movedCard: Card = { ...cardToMove, listId: targetListId };
+      const targetList = s.lists.find((l) => l.id === targetListId);
+      if (targetList) {
+        movedCard.status = targetList.title;
+        movedCard.completedAt = isCompletedStatus(targetList.title) ? new Date().toISOString() : null;
+      }
+
+      const listsWithoutCard = s.lists.map((l) =>
+        l.id === sourceList.id ? { ...l, cards: l.cards.filter((c) => c.id !== cardId) } : l
+      );
 
       const finalLists = listsWithoutCard.map((l) => {
         if (l.id !== targetListId) return l;
         const insertAt = Math.min(targetPosition, l.cards.length);
         const newCards = [...l.cards];
-        newCards.splice(insertAt, 0, movedCard!);
+        newCards.splice(insertAt, 0, movedCard);
         return { ...l, cards: newCards };
       });
 
@@ -280,14 +355,17 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         switch (operation) {
           case 'move':
             return targetListId ? { ...card, listId: targetListId } : card;
-          case 'archive':
-            return { ...card, status: 'done', completedAt: new Date().toISOString(), progress: 100 };
+          case 'archive': {
+            const doneList = s.lists.find((l) => isCompletedStatus(l.title));
+            const archiveStatus = doneList?.title ?? 'Done';
+            return { ...card, status: archiveStatus, completedAt: new Date().toISOString(), progress: 100 };
+          }
           case 'status':
             return nextStatus
               ? {
                   ...card,
                   status: nextStatus,
-                  completedAt: nextStatus === 'done' ? new Date().toISOString() : null,
+                  completedAt: isCompletedStatus(nextStatus) ? new Date().toISOString() : null,
                 }
               : card;
           case 'assign':
@@ -345,6 +423,12 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         });
         const targetList = listsWithoutCards.find((l) => l.id === targetListId);
         if (!targetList) return s;
+        const completedAt = isCompletedStatus(targetList.title) ? new Date().toISOString() : null;
+        movedCards = movedCards.map((c) => ({
+          ...c,
+          status: targetList.title,
+          completedAt,
+        }));
         const finalLists = listsWithoutCards.map((l) =>
           l.id === targetListId ? { ...l, cards: [...l.cards, ...movedCards] } : l
         );

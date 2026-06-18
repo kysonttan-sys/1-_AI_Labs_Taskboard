@@ -60,7 +60,7 @@ describe('POST /api/okrs/[objectiveId]/key-results/[krId]/cards', () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.card.title).toBe('Task 1');
-    expect(body.card.status).toBe('todo');
+    expect(body.card.status).toBe('To Do');
 
     const link = await prisma.cardKeyResult.findFirst({ where: { cardId: body.card.id } });
     expect(link?.keyResultId).toBe(kr.id);

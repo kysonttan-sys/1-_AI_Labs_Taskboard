@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useProjectStore } from '@/features/projects/projectStore';
 import { useBoardStore } from '@/features/board/boardStore';
 import { useOkrStore } from '@/features/okrs/okrStore';
-import { FolderKanban, Target, ArrowLeft, Plus, LayoutGrid } from 'lucide-react';
+import { FolderKanban, Target, ArrowLeft, Plus, LayoutGrid, BarChart3 } from 'lucide-react';
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -76,6 +76,13 @@ export default function ProjectDetailPage() {
         >
           <Target className="h-4 w-4" />
           OKRs ({projectObjectives.length})
+        </button>
+        <button
+          onClick={() => router.push(`/projects/${projectId}/gantt`)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
+        >
+          <BarChart3 className="h-4 w-4" />
+          Gantt
         </button>
       </div>
 

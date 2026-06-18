@@ -121,20 +121,20 @@ export default function BulkActionBar() {
         </div>
       </div>
 
-      {/* Status */}
+      {/* Status (derived from list titles) */}
       <div className="relative group">
         <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] transition-colors">
           <CheckCircle className="h-3.5 w-3.5" />
           Status
         </button>
-        <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-30 w-36 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl py-1">
-          {['todo', 'in_progress', 'done', 'blocked'].map((s) => (
+        <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-30 w-44 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-xl py-1">
+          {lists.map((list) => (
             <button
-              key={s}
-              onClick={() => run('status', { status: s })}
-              className="w-full text-left px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors capitalize"
+              key={list.id}
+              onClick={() => run('move', { targetListId: list.id })}
+              className="w-full text-left px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors"
             >
-              {s.replace('_', ' ')}
+              {list.title}
             </button>
           ))}
         </div>

@@ -16,6 +16,7 @@ import { useCalendarStore } from '@/features/calendar/calendarStore';
 import { useBoardStore } from '@/features/board/boardStore';
 import { useAuthStore } from '@/features/auth/authStore';
 import { getPriorityConfig } from '@/lib/utils/theme';
+import { isCompletedStatus } from '@/lib/board/status';
 import EventModal from './EventModal';
 import type { CalendarEvent } from '@/types';
 
@@ -227,7 +228,7 @@ export default function CalendarMonthView() {
                 {/* Task & event labels */}
                 <div className="mt-1 space-y-0.5 overflow-hidden">
                   {dayCards.slice(0, 5).map((card) => {
-                    const cfg = getPriorityConfig(card.priority, card.status === 'done');
+                    const cfg = getPriorityConfig(card.priority, isCompletedStatus(card.status) || !!card.completedAt);
                     return (
                       <div
                         key={card.id}

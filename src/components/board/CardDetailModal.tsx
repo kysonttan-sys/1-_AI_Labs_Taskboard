@@ -29,12 +29,6 @@ interface LabelOption {
   color: string;
 }
 
-const STATUS_OPTIONS = [
-  { value: 'todo', label: 'To Do' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'done', label: 'Done' },
-  { value: 'blocked', label: 'Blocked' },
-];
 
 const PRIORITY_OPTIONS = [
   { value: 'low', label: 'Low', color: '#6b7280' },
@@ -50,10 +44,26 @@ interface CardDetailModalProps {
 
 export default function CardDetailModal({ card, onClose }: CardDetailModalProps) {
   const { updateCard, deleteCard, lists } = useBoardStore();
+  const listStatusOptions = React.useMemo(() => {
+    const seen = new Set<string>();
+    const opts = lists
+      .filter((l) => l.boardId === card.boardId)
+      .map((l) => ({ value: l.title, label: l.title }))
+      .filter((opt) => {
+        if (seen.has(opt.value)) return false;
+        seen.add(opt.value);
+        return true;
+      });
+    if (card.status && !seen.has(card.status)) {
+      opts.push({ value: card.status, label: card.status });
+    }
+    return opts;
+  }, [lists, card.boardId, card.status]);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description ?? '');
   const [status, setStatus] = useState(card.status);
+  useEffect(() => setStatus(card.status), [card.status]);
   const [priority, setPriority] = useState(card.priority);
   const [progress, setProgress] = useState(card.progress);
   const [startDate, setStartDate] = useState(
@@ -301,7 +311,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                 onChange={(e) => handleStatusChange(e.target.value)}
                 className="w-full bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] focus-ring appearance-none"
               >
-                {STATUS_OPTIONS.map((opt) => (
+                {listStatusOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>

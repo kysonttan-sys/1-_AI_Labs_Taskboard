@@ -1,4 +1,5 @@
 import type { Card } from '@/types';
+import { isCompletedStatus } from '@/lib/board/status';
 
 const PRIORITY_ORDER: Record<string, number> = {
   urgent: 0,
@@ -20,8 +21,8 @@ export function sortCards(cards: Card[], isDoneColumn: boolean): Card[] {
     }
 
     // Done cards go to the bottom within non-done columns
-    const aDone = a.status === 'done' ? 1 : 0;
-    const bDone = b.status === 'done' ? 1 : 0;
+    const aDone = isCompletedStatus(a.status) || !!a.completedAt ? 1 : 0;
+    const bDone = isCompletedStatus(b.status) || !!b.completedAt ? 1 : 0;
     if (aDone !== bDone) return aDone - bDone;
 
     // Priority: urgent first

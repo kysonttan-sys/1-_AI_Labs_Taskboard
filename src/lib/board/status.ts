@@ -1,19 +1,16 @@
-// Maps common list titles to card statuses. Users can rename lists freely;
-// if the title matches one of these we keep the card status in sync.
-const LIST_TITLE_STATUS_MAP: Record<string, string> = {
-  'todo': 'todo',
-  'to do': 'todo',
-  'inprogress': 'in_progress',
-  'in progress': 'in_progress',
-  'in-progress': 'in_progress',
-  'progress': 'in_progress',
-  'review': 'review',
-  'done': 'done',
-  'complete': 'done',
-  'completed': 'done',
-};
+// With Option A, card status is the list title itself. We keep small helpers
+// for detecting "done" / "blocked" states from any status text.
 
-export function deriveStatusFromListTitle(title: string): string | null {
-  const normalized = title.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
-  return LIST_TITLE_STATUS_MAP[normalized] ?? null;
+function normalizeStatus(status: string): string {
+  return status.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function isCompletedStatus(status: string): boolean {
+  const normalized = normalizeStatus(status);
+  return normalized === 'done' || normalized === 'complete' || normalized === 'completed';
+}
+
+export function isBlockedStatus(status: string): boolean {
+  const normalized = normalizeStatus(status);
+  return normalized === 'blocked' || normalized === 'block';
 }

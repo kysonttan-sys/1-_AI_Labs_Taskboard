@@ -5,7 +5,7 @@ import { createNotification } from '@/lib/notifications';
 import { createActivityEvent } from '@/lib/activity';
 import { broadcastToBoard } from '@/lib/socket-server';
 import { recomputeLinkedKeyResults } from './_recompute';
-import { deriveStatusFromListTitle } from '@/lib/board/status';
+import { isCompletedStatus } from '@/lib/board/status';
 
 export async function GET(
   _request: NextRequest,
@@ -95,6 +95,7 @@ export async function PATCH(
         description: true,
         progress: true,
         listId: true,
+        position: true,
       },
     });
 
@@ -125,29 +126,49 @@ export async function PATCH(
       }
     }
 
-    let derivedStatus: string | undefined;
-    if (listId !== undefined && listId !== before.listId) {
+    let resolvedListId: string | undefined = listId;
+    let resolvedStatus: string | undefined = status;
+
+    if (resolvedListId !== undefined && resolvedListId !== before.listId) {
       const targetList = await prisma.list.findUnique({
-        where: { id: listId },
-        select: { title: true },
+        where: { id: resolvedListId },
+        select: { title: true, boardId: true },
       });
-      if (targetList) {
-        const mapped = deriveStatusFromListTitle(targetList.title);
-        if (mapped) derivedStatus = mapped;
+      if (!targetList || targetList.boardId !== before.boardId) {
+        return NextResponse.json({ error: "listId does not belong to this card's board" }, { status: 400 });
+      }
+      resolvedStatus = targetList.title;
+    } else if (status !== undefined && status !== before.status && resolvedListId === undefined) {
+      // If a manual status change matches another list title, move the card there.
+      const matchingList = await prisma.list.findFirst({
+        where: {
+          boardId: before.boardId,
+          title: { equals: status, mode: 'insensitive' },
+        },
+        select: { id: true, title: true },
+      });
+      if (matchingList) {
+        resolvedListId = matchingList.id;
+        resolvedStatus = matchingList.title;
       }
     }
+
+    const shouldMoveList = resolvedListId !== undefined && resolvedListId !== before.listId;
+    const finalStatus = resolvedStatus ?? before.status;
 
     const updateData: Record<string, unknown> = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
-    if (status !== undefined) updateData.status = status;
-    if (derivedStatus !== undefined && status === undefined) updateData.status = derivedStatus;
+    if (resolvedStatus !== undefined) updateData.status = resolvedStatus;
     if (priority !== undefined) updateData.priority = priority;
     if (progress !== undefined) updateData.progress = progress;
     if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
     if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
-    if (listId !== undefined) updateData.listId = listId;
-    if (position !== undefined) updateData.position = position;
+    if (resolvedListId !== undefined) updateData.listId = resolvedListId;
+    if (resolvedStatus !== undefined) {
+      updateData.completedAt = isCompletedStatus(finalStatus) ? new Date() : null;
+    }
+    if (!shouldMoveList && position !== undefined) updateData.position = position;
 
     // Handle assignee synchronization
     if (assigneeIds !== undefined) {
@@ -165,18 +186,66 @@ export async function PATCH(
       };
     }
 
-    const card = await prisma.card.update({
-      where: { id: cardId },
-      data: updateData,
-      include: {
-        assignees: { include: { user: true } },
-        labels: { include: { label: true } },
-        checklist: { orderBy: { position: 'asc' } },
-        comments: { include: { author: true }, orderBy: { createdAt: 'asc' } },
-        keyResults: { include: { keyResult: true } },
-        dependsOn: { include: { dependsOnCard: true } },
-      },
-    });
+    let card;
+    if (shouldMoveList) {
+      card = await prisma.$transaction(async (tx) => {
+        // Shift cards after the old position down to fill the gap
+        await tx.card.updateMany({
+          where: { listId: before.listId, position: { gt: before.position } },
+          data: { position: { decrement: 1 } },
+        });
+
+        // Append the card to the end of the target list
+        const maxAgg = await tx.card.aggregate({
+          where: { listId: resolvedListId },
+          _max: { position: true },
+        });
+        const nextPos = (maxAgg._max.position ?? -1) + 1;
+
+        const updated = await tx.card.update({
+          where: { id: cardId },
+          data: { ...updateData, position: nextPos },
+          include: {
+            assignees: { include: { user: true } },
+            labels: { include: { label: true } },
+            checklist: { orderBy: { position: 'asc' } },
+            comments: { include: { author: true }, orderBy: { createdAt: 'asc' } },
+            keyResults: { include: { keyResult: true } },
+            dependsOn: { include: { dependsOnCard: true } },
+          },
+        });
+
+        // Reindex both source and target lists so positions stay gap-free
+        for (const lid of [before.listId, resolvedListId!]) {
+          const cardsInList = await tx.card.findMany({
+            where: { listId: lid },
+            orderBy: { position: 'asc' },
+            select: { id: true },
+          });
+          for (let i = 0; i < cardsInList.length; i++) {
+            await tx.card.update({
+              where: { id: cardsInList[i].id },
+              data: { position: i },
+            });
+          }
+        }
+
+        return updated;
+      });
+    } else {
+      card = await prisma.card.update({
+        where: { id: cardId },
+        data: updateData,
+        include: {
+          assignees: { include: { user: true } },
+          labels: { include: { label: true } },
+          checklist: { orderBy: { position: 'asc' } },
+          comments: { include: { author: true }, orderBy: { createdAt: 'asc' } },
+          keyResults: { include: { keyResult: true } },
+          dependsOn: { include: { dependsOnCard: true } },
+        },
+      });
+    }
 
     await recomputeLinkedKeyResults(cardId);
 
@@ -184,8 +253,6 @@ export async function PATCH(
     if (before) {
       const triggerUserId = session.userId;
       const beforeAssigneeIds = new Set(before.assignees.map((a) => a.userId));
-
-      // New assignees — notify them
 
       // New assignees — notify them
       if (assigneeIds !== undefined) {
@@ -205,13 +272,13 @@ export async function PATCH(
       }
 
       // Status changed — notify all assignees
-      if (status !== undefined && status !== before.status) {
+      if (resolvedStatus !== undefined && finalStatus !== before.status) {
         for (const a of card.assignees) {
           if (a.userId !== triggerUserId) {
             await createNotification({
               type: 'card_status_changed',
               title: 'Card status updated',
-              body: `${before.title} → ${status}`,
+              body: `${before.title} → ${finalStatus}`,
               userId: a.userId,
               cardId: card.id,
               boardId: before.boardId,
@@ -242,16 +309,16 @@ export async function PATCH(
       const metadata: Record<string, unknown> = {};
       if (title !== undefined && title !== before.title) metadata.title = { from: before.title, to: title };
       if (description !== undefined && description !== before.description) metadata.description = true;
-      if (status !== undefined && status !== before.status) metadata.status = { from: before.status, to: status };
+      if (resolvedStatus !== undefined && finalStatus !== before.status) metadata.status = { from: before.status, to: finalStatus };
       if (priority !== undefined && priority !== before.priority) metadata.priority = { from: before.priority, to: priority };
       if (progress !== undefined && progress !== before.progress) metadata.progress = { from: before.progress, to: progress };
       if (startDate !== undefined) metadata.startDate = true;
       if (dueDate !== undefined) metadata.dueDate = true;
-      if (listId !== undefined && listId !== before.listId) metadata.listId = { from: before.listId, to: listId };
+      if (resolvedListId !== undefined && resolvedListId !== before.listId) metadata.listId = { from: before.listId, to: resolvedListId };
 
       if (Object.keys(metadata).length > 0) {
         await createActivityEvent({
-          type: listId !== undefined && listId !== before.listId ? 'card_moved' : 'card_updated',
+          type: resolvedListId !== undefined && resolvedListId !== before.listId ? 'card_moved' : 'card_updated',
           actorId: triggerUserId,
           boardId: before.boardId,
           cardId: card.id,

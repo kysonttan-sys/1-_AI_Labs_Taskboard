@@ -4,7 +4,8 @@ import { requireSession, requireCardAccess } from '@/lib/auth/permissions';
 import { createNotification } from '@/lib/notifications';
 import { createActivityEvent } from '@/lib/activity';
 import { broadcastToBoard } from '@/lib/socket-server';
-import { deriveStatusFromListTitle } from '@/lib/board/status';
+import { recomputeLinkedKeyResults } from '../_recompute';
+import { isCompletedStatus } from '@/lib/board/status';
 
 export async function PATCH(
   request: NextRequest,
@@ -61,7 +62,7 @@ export async function PATCH(
   const sourceListId = card.listId;
   const sourceListTitle = card.list?.title ?? '';
   const isSameList = sourceListId === targetListId;
-  const targetStatus = !isSameList ? deriveStatusFromListTitle(targetList.title) : null;
+  const targetStatus = !isSameList ? targetList.title : null;
 
   await prisma.$transaction(async (tx) => {
     // Remove the card from its current position by shifting cards after it down
@@ -108,7 +109,12 @@ export async function PATCH(
           listId: targetListId,
           boardId: targetList.boardId,
           position: targetPosition,
-          ...(targetStatus ? { status: targetStatus } : {}),
+          ...(targetStatus
+            ? {
+                status: targetStatus,
+                completedAt: isCompletedStatus(targetStatus) ? new Date() : null,
+              }
+            : {}),
         },
       });
     }
@@ -133,6 +139,8 @@ export async function PATCH(
       }
     }
   });
+
+  await recomputeLinkedKeyResults(cardId);
 
   const updatedCard = await prisma.card.findUnique({
     where: { id: cardId },

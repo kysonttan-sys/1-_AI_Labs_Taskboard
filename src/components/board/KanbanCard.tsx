@@ -7,6 +7,7 @@ import { Calendar, CheckSquare, MessageSquare, CheckCircle, Target, Link2 } from
 import type { Card } from '@/types';
 import { getInitials } from '@/lib/utils/initials';
 import { getPriorityConfig } from '@/lib/utils/theme';
+import { isCompletedStatus } from '@/lib/board/status';
 import { useBulkSelectionStore } from '@/features/board/bulkSelectionStore';
 
 interface KanbanCardProps {
@@ -27,12 +28,12 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
   const { isSelecting, selectedIds, toggle } = useBulkSelectionStore();
   const isSelected = selectedIds.has(card.id);
 
-  const isDone = card.status === 'done';
+  const isDone = isCompletedStatus(card.status) || !!card.completedAt;
   const config = getPriorityConfig(card.priority, isDone);
   const checkedCount = card.checklist?.filter((c) => c.checked).length ?? 0;
   const totalCount = card.checklist?.length ?? 0;
   const blockerCount =
-    card.dependsOn?.filter((d) => d.dependsOnCard.status !== 'done' && !d.dependsOnCard.completedAt).length ?? 0;
+    card.dependsOn?.filter((d) => !isCompletedStatus(d.dependsOnCard.status) && !d.dependsOnCard.completedAt).length ?? 0;
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),

@@ -9,9 +9,11 @@ export interface WeightedLink {
   card: ContributionCard;
 }
 
+import { isCompletedStatus, isBlockedStatus } from '@/lib/board/status';
+
 export function cardContribution(card: ContributionCard): number {
-  if (card.status === 'done' || card.completedAt) return 1;
-  if (card.status === 'blocked') return 0;
+  if (isCompletedStatus(card.status) || card.completedAt) return 1;
+  if (isBlockedStatus(card.status)) return 0;
   const value = typeof card.progress === 'number' ? card.progress / 100 : 0;
   return Math.max(0, Math.min(1, value));
 }

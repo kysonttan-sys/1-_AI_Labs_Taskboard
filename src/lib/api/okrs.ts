@@ -16,7 +16,7 @@ export interface KeyResult {
 export interface LinkedTask {
   id: string;
   title: string;
-  status: 'todo' | 'in_progress' | 'review' | 'done';
+  status: string;
   listId: string;
   boardId: string;
   dueDate: string | null;

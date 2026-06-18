@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link2, Plus, X } from 'lucide-react';
+import { isCompletedStatus } from '@/lib/board/status';
 
 interface DepCard {
   id: string;
@@ -68,7 +69,7 @@ export default function CardDependencyLinker({ cardId, boardId, dependencies, on
     onChange(dependencies.filter((d) => d.dependsOnCardId !== dependsOnCardId));
   }
 
-  const isDone = (c: DepCard) => c.status === 'done' || c.completedAt;
+  const isDone = (c: DepCard) => isCompletedStatus(c.status) || !!c.completedAt;
 
   return (
     <div>

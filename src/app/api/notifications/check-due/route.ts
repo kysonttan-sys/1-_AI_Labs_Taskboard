@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/permissions';
+import { isCompletedStatus } from '@/lib/board/status';
 import type { NotificationType } from '@/lib/notifications';
 
 export async function POST() {
@@ -13,13 +14,14 @@ export async function POST() {
   const cards = await prisma.card.findMany({
     where: {
       dueDate: { not: null },
-      status: { not: 'done' },
       assignees: { some: {} },
     },
     select: {
       id: true,
       title: true,
       dueDate: true,
+      status: true,
+      completedAt: true,
       assignees: { select: { userId: true } },
       boardId: true,
     },
@@ -29,6 +31,7 @@ export async function POST() {
   const pending: { type: NotificationType; userId: string; cardId: string; boardId: string; title: string; body?: string }[] = [];
 
   for (const card of cards) {
+    if (isCompletedStatus(card.status) || card.completedAt) continue;
     if (!card.dueDate) continue;
     const dueDate = new Date(card.dueDate);
 

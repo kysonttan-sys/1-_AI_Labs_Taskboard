@@ -9,6 +9,7 @@ import KanbanCard from './KanbanCard';
 import AddCardInput from './AddCardInput';
 import { useBoardStore } from '@/features/board/boardStore';
 import { sortCards } from '@/lib/utils';
+import { isCompletedStatus } from '@/lib/board/status';
 import type { Card, List } from '@/types';
 
 interface KanbanColumnProps {
@@ -23,7 +24,7 @@ export default function KanbanColumn({ list, onAddCard, onCardClick }: KanbanCol
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const parentRef = useRef<HTMLDivElement>(null);
-  const isDoneColumn = list.cards.length > 0 && list.cards.every((c) => c.status === 'done');
+  const isDoneColumn = list.cards.length > 0 && list.cards.every((c) => isCompletedStatus(c.status) || !!c.completedAt);
   const sortedCards = sortCards(list.cards, isDoneColumn);
   const VISIBLE_LIMIT = 10;
   const visibleCards = showAll ? sortedCards : sortedCards.slice(0, VISIBLE_LIMIT);

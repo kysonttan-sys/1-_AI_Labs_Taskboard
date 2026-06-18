@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { requireSession, requireListAccess } from '@/lib/auth/permissions';
 import { createActivityEvent } from '@/lib/activity';
+import { isCompletedStatus } from '@/lib/board/status';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,17 @@ export async function PATCH(
       },
     });
     if (title !== undefined && title !== beforeList.title) {
+      // With Option A, card status follows the list title, so keep cards in sync.
+      const isCompleted = isCompletedStatus(title);
+      await prisma.card.updateMany({
+        where: { listId },
+        data: {
+          status: title,
+          completedAt: isCompleted ? new Date() : null,
+          ...(isCompleted ? { progress: 100 } : {}),
+        },
+      });
+
       await createActivityEvent({
         type: 'list_renamed',
         actorId: session.userId,
