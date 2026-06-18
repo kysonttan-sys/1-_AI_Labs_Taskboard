@@ -280,26 +280,32 @@ export default function KeyResultRow({ objectiveId, projectId, kr, index, total 
       </div>
       {kr.cards && kr.cards.length > 0 && (
         <div className="mt-3 space-y-1.5">
+          <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)] font-medium">Linked tasks</p>
           {kr.cards.map((task) => (
             <a
               key={task.id}
               href={`/board/${task.boardId}?card=${task.id}`}
-              className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-sm"
+              className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-transparent hover:border-[var(--border)] transition-colors text-sm group"
             >
               <span className="truncate text-[var(--text-primary)]">{task.title}</span>
-              <StatusBadge status={task.status} />
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]">
+                  Open board →
+                </span>
+                <StatusBadge status={task.status} />
+              </div>
             </a>
           ))}
         </div>
       )}
       <button
         onClick={() => setPickerOpen(true)}
-        className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 rounded text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors border border-dashed border-[var(--border)]"
+        className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] transition-colors border border-dashed border-[var(--border)]"
       >
         <Plus className="h-3.5 w-3.5" />
-        Task
+        Add task
       </button>
-      {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+      {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
       {pickerOpen && (
         <KeyResultTaskPicker
           projectId={projectId}
