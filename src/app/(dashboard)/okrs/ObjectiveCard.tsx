@@ -26,19 +26,26 @@ export default function ObjectiveCard({ objective, overallPct }: Props) {
   const [newKrTitle, setNewKrTitle] = useState('');
   const [newKrTarget, setNewKrTarget] = useState('100');
   const [newKrUnit, setNewKrUnit] = useState('');
+  const [newKrStartDate, setNewKrStartDate] = useState('');
+  const [newKrEndDate, setNewKrEndDate] = useState('');
 
   const handleAddKr = async () => {
     if (!newKrTitle.trim()) return;
     const target = Number(newKrTarget);
     if (!Number.isFinite(target) || target <= 0) return;
+    if (!newKrStartDate || !newKrEndDate) return;
     await addKeyResult(objective.id, {
       title: newKrTitle.trim(),
       target,
       unit: newKrUnit.trim() || undefined,
+      startDate: newKrStartDate,
+      endDate: newKrEndDate,
     });
     setNewKrTitle('');
     setNewKrTarget('100');
     setNewKrUnit('');
+    setNewKrStartDate('');
+    setNewKrEndDate('');
     setAddingKr(false);
   };
 
@@ -104,6 +111,21 @@ export default function ObjectiveCard({ objective, overallPct }: Props) {
           />
           <div className="flex items-center gap-2">
             <input
+              type="date"
+              value={newKrStartDate}
+              onChange={(e) => setNewKrStartDate(e.target.value)}
+              className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+            />
+            <span className="text-xs text-[var(--text-tertiary)]">to</span>
+            <input
+              type="date"
+              value={newKrEndDate}
+              onChange={(e) => setNewKrEndDate(e.target.value)}
+              className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input
               type="number"
               value={newKrTarget}
               onChange={(e) => setNewKrTarget(e.target.value)}
@@ -131,6 +153,8 @@ export default function ObjectiveCard({ objective, overallPct }: Props) {
                 setNewKrTitle('');
                 setNewKrTarget('100');
                 setNewKrUnit('');
+                setNewKrStartDate('');
+                setNewKrEndDate('');
               }}
               className="px-3 py-1.5 rounded text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
             >
