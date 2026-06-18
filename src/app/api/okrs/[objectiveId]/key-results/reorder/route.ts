@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireObjectiveAccess } from '@/lib/auth/permissions';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ objectiveId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const { session, response } = await requireSession();
+  if (response) return response;
+
   const { objectiveId } = await params;
   const body = await request.json();
   const { krIds } = body;
@@ -16,15 +17,15 @@ export async function PATCH(
     return NextResponse.json({ error: 'krIds must be a non-empty string array' }, { status: 400 });
   }
 
-  const objective = await prisma.objective.findUnique({
-    where: { id: objectiveId },
-    include: { keyResults: true },
-  });
-  if (!objective) {
-    return NextResponse.json({ error: 'Objective not found' }, { status: 404 });
-  }
+  const { response: accessResponse } = await requireObjectiveAccess(session, objectiveId);
+  if (accessResponse) return accessResponse;
 
-  const existingIds = new Set(objective.keyResults.map((kr) => kr.id));
+  const keyResults = await prisma.keyResult.findMany({
+    where: { objectiveId },
+    select: { id: true },
+  });
+
+  const existingIds = new Set(keyResults.map((kr) => kr.id));
   if (krIds.length !== existingIds.size || !krIds.every((id) => existingIds.has(id))) {
     return NextResponse.json({ error: 'krIds must contain exactly the existing key result ids' }, { status: 400 });
   }

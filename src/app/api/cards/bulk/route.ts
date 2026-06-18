@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireBoardAccess, requireListAccess } from '@/lib/auth/permissions';
 import { createActivityEvent } from '@/lib/activity';
 import { broadcastToBoard } from '@/lib/socket-server';
 import { recomputeLinkedKeyResults } from '../[cardId]/_recompute';
@@ -21,10 +21,8 @@ interface BulkRequest {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
+  const { session, response } = await requireSession();
+  if (response) return response;
 
   const body: BulkRequest = await request.json();
   const { operation, cardIds } = body;
@@ -54,51 +52,62 @@ export async function POST(request: NextRequest) {
     }
 
     const boardId = cards[0].boardId;
+    const boardAuth = await requireBoardAccess(session, boardId);
+    if (boardAuth.response) return boardAuth.response;
 
     switch (operation) {
       case 'move': {
         if (!body.targetListId) {
           return NextResponse.json({ error: 'targetListId is required' }, { status: 400 });
         }
-        const targetList = await prisma.list.findUnique({
-          where: { id: body.targetListId },
-          select: { id: true, boardId: true },
-        });
-        if (!targetList || targetList.boardId !== boardId) {
+        const targetListId = body.targetListId;
+        const listAuth = await requireListAccess(session, targetListId);
+        if (listAuth.response) return listAuth.response;
+        if (listAuth.list.boardId !== boardId) {
           return NextResponse.json({ error: 'Invalid target list' }, { status: 400 });
         }
 
         const maxPosition = await prisma.card.aggregate({
-          where: { listId: body.targetListId },
+          where: { listId: targetListId },
           _max: { position: true },
         });
-        let nextPosition = (maxPosition._max.position ?? -1) + 1;
+        const nextPosition = (maxPosition._max.position ?? -1) + 1;
+
+        const updated = await prisma.$transaction(
+          cards.map((card, index) =>
+            prisma.card.update({
+              where: { id: card.id },
+              data: { listId: targetListId, position: nextPosition + index },
+            })
+          )
+        );
 
         for (const card of cards) {
-          await prisma.card.update({
-            where: { id: card.id },
-            data: { listId: body.targetListId, position: nextPosition++ },
-          });
           await createActivityEvent({
             type: 'card_moved',
             actorId: session.userId,
             boardId,
             cardId: card.id,
-            listId: body.targetListId,
-            metadata: { title: card.title, fromListId: card.listId, toListId: body.targetListId },
+            listId: targetListId,
+            metadata: { title: card.title, fromListId: card.listId, toListId: targetListId },
           });
           broadcastToBoard(boardId, 'card-updated', { cardId: card.id, userId: session.userId });
         }
-        return NextResponse.json({ updated: cards.length });
+        return NextResponse.json({ updated: updated.length });
       }
 
       case 'archive': {
         const now = new Date();
+        const updated = await prisma.$transaction(
+          cards.map((card) =>
+            prisma.card.update({
+              where: { id: card.id },
+              data: { status: 'done', completedAt: now, progress: 100 },
+            })
+          )
+        );
+
         for (const card of cards) {
-          await prisma.card.update({
-            where: { id: card.id },
-            data: { status: 'done', completedAt: now, progress: 100 },
-          });
           await createActivityEvent({
             type: 'card_updated',
             actorId: session.userId,
@@ -107,50 +116,66 @@ export async function POST(request: NextRequest) {
             listId: card.listId,
             metadata: { title: card.title, status: { from: card.status, to: 'done' } },
           });
-          await recomputeLinkedKeyResults(card.id);
           broadcastToBoard(boardId, 'card-updated', { cardId: card.id, userId: session.userId });
         }
-        return NextResponse.json({ updated: cards.length });
+        for (const card of cards) {
+          await recomputeLinkedKeyResults(card.id);
+        }
+        return NextResponse.json({ updated: updated.length });
       }
 
       case 'status': {
         if (!body.status) {
           return NextResponse.json({ error: 'status is required' }, { status: 400 });
         }
-        const completedAt = body.status === 'done' ? new Date() : null;
+        const newStatus = body.status;
+        const completedAt = newStatus === 'done' ? new Date() : null;
+        const updated = await prisma.$transaction(
+          cards.map((card) =>
+            prisma.card.update({
+              where: { id: card.id },
+              data: { status: newStatus, completedAt },
+            })
+          )
+        );
+
         for (const card of cards) {
-          await prisma.card.update({
-            where: { id: card.id },
-            data: { status: body.status, completedAt },
-          });
           await createActivityEvent({
             type: 'card_updated',
             actorId: session.userId,
             boardId,
             cardId: card.id,
             listId: card.listId,
-            metadata: { title: card.title, status: { from: card.status, to: body.status } },
+            metadata: { title: card.title, status: { from: card.status, to: newStatus } },
           });
-          await recomputeLinkedKeyResults(card.id);
           broadcastToBoard(boardId, 'card-updated', { cardId: card.id, userId: session.userId });
         }
-        return NextResponse.json({ updated: cards.length });
+        for (const card of cards) {
+          await recomputeLinkedKeyResults(card.id);
+        }
+        return NextResponse.json({ updated: updated.length });
       }
 
       case 'assign': {
         if (!body.assigneeIds || !Array.isArray(body.assigneeIds)) {
           return NextResponse.json({ error: 'assigneeIds is required' }, { status: 400 });
         }
-        for (const card of cards) {
-          await prisma.card.update({
-            where: { id: card.id },
-            data: {
-              assignees: {
-                deleteMany: body.appendAssignees ? { userId: { notIn: body.assigneeIds } } : {},
-                create: body.assigneeIds.map((userId: string) => ({ userId })),
+        const assigneeIds = body.assigneeIds;
+        const updated = await prisma.$transaction(
+          cards.map((card) =>
+            prisma.card.update({
+              where: { id: card.id },
+              data: {
+                assignees: {
+                  deleteMany: body.appendAssignees ? { userId: { notIn: assigneeIds } } : {},
+                  create: assigneeIds.map((userId: string) => ({ userId })),
+                },
               },
-            },
-          });
+            })
+          )
+        );
+
+        for (const card of cards) {
           await createActivityEvent({
             type: 'card_updated',
             actorId: session.userId,
@@ -161,23 +186,29 @@ export async function POST(request: NextRequest) {
           });
           broadcastToBoard(boardId, 'card-updated', { cardId: card.id, userId: session.userId });
         }
-        return NextResponse.json({ updated: cards.length });
+        return NextResponse.json({ updated: updated.length });
       }
 
       case 'label': {
         if (!body.labelIds || !Array.isArray(body.labelIds)) {
           return NextResponse.json({ error: 'labelIds is required' }, { status: 400 });
         }
-        for (const card of cards) {
-          await prisma.card.update({
-            where: { id: card.id },
-            data: {
-              labels: {
-                deleteMany: body.appendLabels ? { labelId: { notIn: body.labelIds } } : {},
-                create: body.labelIds.map((labelId: string) => ({ labelId })),
+        const labelIds = body.labelIds;
+        const updated = await prisma.$transaction(
+          cards.map((card) =>
+            prisma.card.update({
+              where: { id: card.id },
+              data: {
+                labels: {
+                  deleteMany: body.appendLabels ? { labelId: { notIn: labelIds } } : {},
+                  create: labelIds.map((labelId: string) => ({ labelId })),
+                },
               },
-            },
-          });
+            })
+          )
+        );
+
+        for (const card of cards) {
           await createActivityEvent({
             type: 'card_updated',
             actorId: session.userId,
@@ -188,12 +219,15 @@ export async function POST(request: NextRequest) {
           });
           broadcastToBoard(boardId, 'card-updated', { cardId: card.id, userId: session.userId });
         }
-        return NextResponse.json({ updated: cards.length });
+        return NextResponse.json({ updated: updated.length });
       }
 
       case 'delete': {
+        const deleted = await prisma.$transaction(
+          cards.map((card) => prisma.card.delete({ where: { id: card.id } }))
+        );
+
         for (const card of cards) {
-          await prisma.card.delete({ where: { id: card.id } });
           await createActivityEvent({
             type: 'card_deleted',
             actorId: session.userId,
@@ -203,7 +237,7 @@ export async function POST(request: NextRequest) {
           });
           broadcastToBoard(boardId, 'card-deleted', { cardId: card.id, userId: session.userId });
         }
-        return NextResponse.json({ deleted: cards.length });
+        return NextResponse.json({ deleted: deleted.length });
       }
 
       default:

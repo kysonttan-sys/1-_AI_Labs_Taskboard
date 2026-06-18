@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireCardAccess } from '@/lib/auth/permissions';
 import { createNotification } from '@/lib/notifications';
 import { createActivityEvent } from '@/lib/activity';
 import { broadcastToBoard } from '@/lib/socket-server';
@@ -11,6 +11,12 @@ export async function GET(
   { params }: { params: Promise<{ cardId: string }> }
 ) {
   const { cardId } = await params;
+
+  const { session, response: sessionResponse } = await requireSession();
+  if (sessionResponse) return sessionResponse;
+
+  const { response: accessResponse } = await requireCardAccess(session, cardId);
+  if (accessResponse) return accessResponse;
 
   const card = await prisma.card.findUnique({
     where: { id: cardId },
@@ -52,6 +58,13 @@ export async function PATCH(
   { params }: { params: Promise<{ cardId: string }> }
 ) {
   const { cardId } = await params;
+
+  const { session, response: sessionResponse } = await requireSession();
+  if (sessionResponse) return sessionResponse;
+
+  const { response: accessResponse } = await requireCardAccess(session, cardId);
+  if (accessResponse) return accessResponse;
+
   const body = await request.json();
 
   const {
@@ -83,6 +96,33 @@ export async function PATCH(
         listId: true,
       },
     });
+
+    if (!before) {
+      return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+    }
+
+    // Cross-board/cross-project prevention for listId and labelIds
+    if (listId !== undefined) {
+      const list = await prisma.list.findUnique({
+        where: { id: listId },
+        select: { boardId: true },
+      });
+      if (!list || list.boardId !== before.boardId) {
+        return NextResponse.json({ error: "listId does not belong to this card's board" }, { status: 400 });
+      }
+    }
+
+    if (labelIds !== undefined) {
+      const labels = await prisma.label.findMany({
+        where: { id: { in: labelIds as string[] } },
+        select: { id: true, boardId: true },
+      });
+      const allExist = labels.length === (labelIds as string[]).length;
+      const allSameBoard = labels.every((label) => label.boardId === before.boardId);
+      if (!allExist || !allSameBoard) {
+        return NextResponse.json({ error: "labelIds must belong to this card's board" }, { status: 400 });
+      }
+    }
 
     const updateData: Record<string, unknown> = {};
     if (title !== undefined) updateData.title = title;
@@ -128,8 +168,7 @@ export async function PATCH(
 
     // Create notifications for relevant changes
     if (before) {
-      const session = await getSession();
-      const triggerUserId = session?.userId || undefined;
+      const triggerUserId = session.userId;
       const beforeAssigneeIds = new Set(before.assignees.map((a) => a.userId));
 
       // New assignees — notify them
@@ -222,8 +261,13 @@ export async function DELETE(
 ) {
   const { cardId } = await params;
 
+  const { session, response: sessionResponse } = await requireSession();
+  if (sessionResponse) return sessionResponse;
+
+  const { response: accessResponse } = await requireCardAccess(session, cardId);
+  if (accessResponse) return accessResponse;
+
   try {
-    const session = await getSession();
     const before = await prisma.card.findUnique({
       where: { id: cardId },
       select: { boardId: true, title: true },
@@ -232,7 +276,7 @@ export async function DELETE(
     if (before) {
       await createActivityEvent({
         type: 'card_deleted',
-        actorId: session?.userId,
+        actorId: session.userId,
         boardId: before.boardId,
         cardId,
         metadata: { title: before.title },

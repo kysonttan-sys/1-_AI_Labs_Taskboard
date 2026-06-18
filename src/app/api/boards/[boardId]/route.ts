@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireBoardAccess, requireProjectAccess } from '@/lib/auth/permissions';
 import { createActivityEvent } from '@/lib/activity';
 
 export const dynamic = 'force-dynamic';
@@ -9,9 +9,12 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ boardId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
   const { boardId } = await params;
+
+  const access = await requireBoardAccess(auth.session, boardId);
+  if (access.response) return access.response;
 
   const board = await prisma.board.findUnique({
     where: { id: boardId },
@@ -52,12 +55,21 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ boardId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
   const { boardId } = await params;
+
+  const access = await requireBoardAccess(auth.session, boardId);
+  if (access.response) return access.response;
+
   const body = await request.json();
 
   const { name, description, icon, position, projectId } = body;
+
+  if (projectId !== undefined) {
+    const projectAccess = await requireProjectAccess(auth.session, projectId);
+    if (projectAccess.response) return projectAccess.response;
+  }
 
   try {
     const before = await prisma.board.findUnique({ where: { id: boardId } });
@@ -74,7 +86,7 @@ export async function PATCH(
     if (name !== undefined && name !== before?.name) {
       await createActivityEvent({
         type: 'board_renamed',
-        actorId: session.userId,
+        actorId: auth.session.userId,
         boardId,
         metadata: { from: before?.name, to: board.name },
       });
@@ -89,9 +101,12 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ boardId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
   const { boardId } = await params;
+
+  const access = await requireBoardAccess(auth.session, boardId);
+  if (access.response) return access.response;
 
   try {
     await prisma.board.delete({ where: { id: boardId } });

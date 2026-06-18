@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { requireSession, requireBoardAccess } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ boardId: string }> }
+) {
+  const { session, response: authResponse } = await requireSession();
+  if (authResponse) return authResponse;
+
+  const { boardId } = await params;
+  const { response: boardResponse } = await requireBoardAccess(session, boardId);
+  if (boardResponse) return boardResponse;
+
   try {
     const { listIds } = await request.json();
 

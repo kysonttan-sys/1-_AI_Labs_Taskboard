@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireCardAccess } from '@/lib/auth/permissions';
 import { createNotification } from '@/lib/notifications';
 import { createActivityEvent } from '@/lib/activity';
 import { broadcastToBoard } from '@/lib/socket-server';
@@ -16,6 +16,27 @@ export async function PATCH(
   if (!targetListId || targetPosition === undefined) {
     return NextResponse.json(
       { error: 'targetListId and targetPosition are required' },
+      { status: 400 }
+    );
+  }
+
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
+
+  const cardAccess = await requireCardAccess(auth.session, cardId);
+  if (cardAccess.response) return cardAccess.response;
+  const authCard = cardAccess.card;
+
+  const targetList = await prisma.list.findUnique({
+    where: { id: targetListId },
+    select: { id: true, boardId: true, title: true },
+  });
+  if (!targetList) {
+    return NextResponse.json({ error: 'Target list not found' }, { status: 404 });
+  }
+  if (targetList.boardId !== authCard.boardId) {
+    return NextResponse.json(
+      { error: 'Target list must belong to the same board' },
       { status: 400 }
     );
   }
@@ -72,7 +93,7 @@ export async function PATCH(
 
       await tx.card.update({
         where: { id: cardId },
-        data: { listId: targetListId, position: targetPosition },
+        data: { listId: targetListId, boardId: targetList.boardId, position: targetPosition },
       });
     }
 
@@ -108,35 +129,29 @@ export async function PATCH(
     },
   });
 
-  // Activity event
-  const session = await getSession();
-  const triggerUserId = session?.userId;
+  const triggerUserId = auth.session.userId;
   await createActivityEvent({
     type: 'card_moved',
     actorId: triggerUserId,
-    boardId: card.boardId,
+    boardId: targetList.boardId,
     cardId,
     listId: targetListId,
     metadata: { fromListId: sourceListId, toListId: targetListId, title: card.title },
   });
 
-  broadcastToBoard(card.boardId, 'card-moved', { cardId, userId: triggerUserId });
+  broadcastToBoard(targetList.boardId, 'card-moved', { cardId, userId: triggerUserId });
 
   // Notify assignees if card moved to a different list
   if (!isSameList && card.assignees.length > 0) {
     for (const a of card.assignees) {
       if (a.userId !== triggerUserId) {
-        const targetList = await prisma.list.findUnique({
-          where: { id: targetListId },
-          select: { title: true },
-        });
         await createNotification({
           type: 'card_moved',
           title: 'Card moved',
-          body: `${card.title} → ${targetList?.title || 'list'}`,
+          body: `${card.title} → ${targetList.title || 'list'}`,
           userId: a.userId,
           cardId: card.id,
-          boardId: card.boardId,
+          boardId: targetList.boardId,
           triggerUserId,
         });
       }

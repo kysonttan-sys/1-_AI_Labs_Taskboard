@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession } from '@/lib/auth/permissions';
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const { response } = await requireSession();
+  if (response) return response;
 
   const projects = await prisma.project.findMany({
     orderBy: { name: 'asc' },
@@ -14,8 +14,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const { response } = await requireSession();
+  if (response) return response;
 
   const body = await request.json();
   const { name, description } = body;

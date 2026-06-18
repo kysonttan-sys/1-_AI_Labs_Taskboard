@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireObjectiveAccess } from '@/lib/auth/permissions';
 import { Prisma } from '@/generated/prisma/client';
 import { parseIsoDateRange } from '@/lib/okrs/dates';
 
@@ -10,9 +10,13 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ objectiveId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const { session, response } = await requireSession();
+  if (response) return response;
+
   const { objectiveId } = await params;
+
+  const { response: objectiveResponse } = await requireObjectiveAccess(session, objectiveId);
+  if (objectiveResponse) return objectiveResponse;
   const body = await request.json();
   const { title, target, current, unit, startDate, endDate } = body;
 
@@ -47,34 +51,30 @@ export async function POST(
     );
   }
 
-  const objective = await prisma.objective.findUnique({ where: { id: objectiveId } });
-  if (!objective) {
-    return NextResponse.json({ error: 'Objective not found' }, { status: 404 });
-  }
-
-  // Compute the next position from current rows, then insert. Two concurrent
-  // requests can both read the same MAX(position) and pick the same value —
-  // the @@unique([objectiveId, position]) constraint turns the second insert
-  // into P2002. We catch that, recompute, and retry.
+  // Compute the next position from current rows, then insert atomically.
+  // Two concurrent requests can still race on the @@unique([objectiveId, position])
+  // constraint; the second insert becomes P2002. We catch that, recompute, and retry.
   for (let attempt = 0; attempt < MAX_POSITION_RETRIES; attempt++) {
-    const maxPosition = await prisma.keyResult.aggregate({
-      where: { objectiveId },
-      _max: { position: true },
-    });
-    const nextPosition = (maxPosition._max.position ?? -1) + 1;
-
     try {
-      const kr = await prisma.keyResult.create({
-        data: {
-          title: title.trim(),
-          target,
-          current: initialCurrent,
-          unit: unit || null,
-          objectiveId,
-          position: nextPosition,
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate,
-        },
+      const kr = await prisma.$transaction(async (tx) => {
+        const maxPosition = await tx.keyResult.aggregate({
+          where: { objectiveId },
+          _max: { position: true },
+        });
+        const nextPosition = (maxPosition._max.position ?? -1) + 1;
+
+        return tx.keyResult.create({
+          data: {
+            title: title.trim(),
+            target,
+            current: initialCurrent,
+            unit: unit || null,
+            objectiveId,
+            position: nextPosition,
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate,
+          },
+        });
       });
       return NextResponse.json(kr, { status: 201 });
     } catch (e) {

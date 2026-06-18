@@ -2,10 +2,38 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { verifyPin } from '@/lib/auth/pin';
 import { createSessionToken, COOKIE_OPTIONS } from '@/lib/auth/session';
+import { requireSession } from '@/lib/auth/permissions';
 import { isRateLimited, getRateLimitKey } from '@/lib/security/rateLimit';
 import { isNonEmptyString } from '@/lib/security/input';
 
 export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
+  const { session, response } = await requireSession();
+  if (!session) return response;
+
+  const name = request.nextUrl.searchParams.get('name');
+  if (!isNonEmptyString(name)) {
+    return NextResponse.json(
+      { error: 'Name is required' },
+      { status: 400 }
+    );
+  }
+
+  const user = await prisma.user.findFirst({
+    where: { name },
+    select: { id: true, name: true, role: true, color: true },
+  });
+
+  if (!user) {
+    return NextResponse.json(
+      { error: 'User not found' },
+      { status: 404 }
+    );
+  }
+
+  return NextResponse.json(user);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,6 +104,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
+  const { session, response: authResponse } = await requireSession();
+  if (!session) return authResponse;
+
   const response = NextResponse.json({ success: true });
 
   response.cookies.set('session', '', {

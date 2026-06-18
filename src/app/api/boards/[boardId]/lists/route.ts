@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { requireSession, requireBoardAccess } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +9,12 @@ export async function GET(
   { params }: { params: Promise<{ boardId: string }> }
 ) {
   const { boardId } = await params;
+
+  const { session, response: sessionResponse } = await requireSession();
+  if (sessionResponse) return sessionResponse;
+
+  const { response: boardResponse } = await requireBoardAccess(session, boardId);
+  if (boardResponse) return boardResponse;
 
   const lists = await prisma.list.findMany({
     where: { boardId },
@@ -22,6 +29,13 @@ export async function POST(
   { params }: { params: Promise<{ boardId: string }> }
 ) {
   const { boardId } = await params;
+
+  const { session, response: sessionResponse } = await requireSession();
+  if (sessionResponse) return sessionResponse;
+
+  const { response: boardResponse } = await requireBoardAccess(session, boardId);
+  if (boardResponse) return boardResponse;
+
   const body = await request.json();
   const { title } = body;
 

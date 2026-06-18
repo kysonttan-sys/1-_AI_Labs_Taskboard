@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireAdmin } from '@/lib/auth/permissions';
 
 export async function GET() {
+  const { response } = await requireSession();
+  if (response) return response;
+
   const settings = await prisma.appSettings.findUnique({ where: { id: 'app' } });
   return NextResponse.json(settings || { setupComplete: false });
 }
 
 export async function PATCH(request: Request) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
+  const { response } = await requireAdmin();
+  if (response) return response;
 
   const body = await request.json();
 

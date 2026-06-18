@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { requireAdmin } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const { session, response } = await requireAdmin();
+  if (!session) return response;
+
   const { name, pin, color } = await request.json();
   if (!name || !pin) return NextResponse.json({ error: 'Name and PIN are required' }, { status: 400 });
 
@@ -16,6 +20,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const { session, response } = await requireAdmin();
+  if (!session) return response;
+
   const { userId } = await request.json();
   if (!userId) return NextResponse.json({ error: 'userId is required' }, { status: 400 });
 

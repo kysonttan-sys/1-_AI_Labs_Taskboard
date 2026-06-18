@@ -103,29 +103,30 @@ export async function POST(request: NextRequest) {
   }
 
   for (let attempt = 0; attempt < MAX_POSITION_RETRIES; attempt++) {
-    const maxPosition = await prisma.objective.aggregate({ _max: { position: true } });
-    const nextPosition = (maxPosition._max.position ?? -1) + 1;
-
     try {
-      const objective = await prisma.objective.create({
-        data: {
-          title: title.trim(),
-          description: description || null,
-          startDate: start,
-          endDate: end,
-          position: nextPosition,
-          projectId,
-        },
-        include: {
-          keyResults: {
-            orderBy: { position: 'asc' },
-            include: {
-              cards: {
-                include: { card: true },
+      const objective = await prisma.$transaction(async (tx) => {
+        const maxPosition = await tx.objective.aggregate({ _max: { position: true } });
+        const nextPosition = (maxPosition._max.position ?? -1) + 1;
+        return tx.objective.create({
+          data: {
+            title: title.trim(),
+            description: description || null,
+            startDate: start,
+            endDate: end,
+            position: nextPosition,
+            projectId,
+          },
+          include: {
+            keyResults: {
+              orderBy: { position: 'asc' },
+              include: {
+                cards: {
+                  include: { card: true },
+                },
               },
             },
           },
-        },
+        });
       });
       return NextResponse.json(serializeObjective(objective), { status: 201 });
     } catch (e) {

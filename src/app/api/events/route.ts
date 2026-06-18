@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession } from '@/lib/auth/permissions';
+
+const ALLOWED_VISIBILITY = ['private', 'team'];
 
 export async function GET(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
+  const { session, response } = await requireSession();
+  if (response) return response;
 
   const { searchParams } = new URL(request.url);
   const startStr = searchParams.get('start');
@@ -40,16 +40,18 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
+  const { session, response } = await requireSession();
+  if (response) return response;
 
   const body = await request.json();
   const { title, description, startDate, endDate, allDay, color, visibility } = body;
 
   if (!title || !startDate) {
     return NextResponse.json({ error: 'title and startDate are required' }, { status: 400 });
+  }
+
+  if (visibility !== undefined && !ALLOWED_VISIBILITY.includes(visibility)) {
+    return NextResponse.json({ error: 'visibility must be private or team' }, { status: 400 });
   }
 
   const event = await prisma.calendarEvent.create({

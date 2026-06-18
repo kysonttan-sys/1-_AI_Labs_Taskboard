@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
 import { createActivityEvent } from '@/lib/activity';
+import { requireSession, requireListAccess } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +10,16 @@ export async function GET(
   { params }: { params: Promise<{ listId: string }> }
 ) {
   const { listId } = await params;
+
+  const sessionAuth = await requireSession();
+  if (sessionAuth.response) {
+    return sessionAuth.response;
+  }
+
+  const listAuth = await requireListAccess(sessionAuth.session, listId);
+  if (listAuth.response) {
+    return listAuth.response;
+  }
 
   const cards = await prisma.card.findMany({
     where: { listId },
@@ -24,6 +34,17 @@ export async function POST(
   { params }: { params: Promise<{ listId: string }> }
 ) {
   const { listId } = await params;
+
+  const sessionAuth = await requireSession();
+  if (sessionAuth.response) {
+    return sessionAuth.response;
+  }
+
+  const listAuth = await requireListAccess(sessionAuth.session, listId);
+  if (listAuth.response) {
+    return listAuth.response;
+  }
+
   const body = await request.json();
   const { title } = body;
 
@@ -31,10 +52,7 @@ export async function POST(
     return NextResponse.json({ error: 'title is required' }, { status: 400 });
   }
 
-  const list = await prisma.list.findUnique({ where: { id: listId } });
-  if (!list) {
-    return NextResponse.json({ error: 'List not found' }, { status: 404 });
-  }
+  const list = listAuth.list;
 
   const maxPosition = await prisma.card.aggregate({
     _max: { position: true },
@@ -58,10 +76,9 @@ export async function POST(
     },
   });
 
-  const session = await getSession();
   await createActivityEvent({
     type: 'card_created',
-    actorId: session?.userId,
+    actorId: sessionAuth.session.userId,
     boardId: card.boardId,
     cardId: card.id,
     listId,

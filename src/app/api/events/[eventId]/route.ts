@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession } from '@/lib/auth/permissions';
+
+const ALLOWED_VISIBILITY = ['private', 'team'];
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
+  const { session, response } = await requireSession();
+  if (response) return response;
 
   const { eventId } = await params;
   const existing = await prisma.calendarEvent.findUnique({ where: { id: eventId } });
@@ -20,6 +20,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const body = await request.json();
   const { title, description, startDate, endDate, allDay, color, visibility } = body;
+
+  if (visibility !== undefined && !ALLOWED_VISIBILITY.includes(visibility)) {
+    return NextResponse.json({ error: 'visibility must be private or team' }, { status: 400 });
+  }
 
   const updated = await prisma.calendarEvent.update({
     where: { id: eventId },
@@ -39,10 +43,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
+  const { session, response } = await requireSession();
+  if (response) return response;
 
   const { eventId } = await params;
   const existing = await prisma.calendarEvent.findUnique({ where: { id: eventId } });

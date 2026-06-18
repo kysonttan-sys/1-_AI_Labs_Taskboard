@@ -38,25 +38,37 @@ export async function POST(request: NextRequest) {
   }
 
   for (let attempt = 0; attempt < MAX_POSITION_RETRIES; attempt++) {
-    const maxPosition = await prisma.board.aggregate({
-      where: { projectId },
-      _max: { position: true },
-    });
-    const nextPosition = (maxPosition._max.position ?? -1) + 1;
-
     try {
-      const board = await prisma.board.create({
-        data: {
-          name: name.trim(),
-          description: description?.trim() || null,
-          icon: icon || '📋',
-          position: nextPosition,
-          projectId,
+      const board = await prisma.$transaction(
+        async (tx) => {
+          const maxPosition = await tx.board.aggregate({
+            where: { projectId },
+            _max: { position: true },
+          });
+          const nextPosition = (maxPosition._max.position ?? -1) + 1;
+
+          return tx.board.create({
+            data: {
+              name: name.trim(),
+              description: description?.trim() || null,
+              icon: icon || '📋',
+              position: nextPosition,
+              projectId,
+            },
+          });
         },
-      });
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          maxWait: 5000,
+          timeout: 10000,
+        }
+      );
       return NextResponse.json(board, { status: 201 });
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        (e.code === 'P2002' || e.code === 'P2034')
+      ) {
         continue;
       }
       throw e;

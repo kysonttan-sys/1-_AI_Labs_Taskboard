@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { requireSession } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  const { response } = await requireSession();
+  if (response) return response;
+
+
   const { searchParams } = new URL(request.url);
   const limit = Math.min(Number(searchParams.get('limit') ?? '50'), 100);
 

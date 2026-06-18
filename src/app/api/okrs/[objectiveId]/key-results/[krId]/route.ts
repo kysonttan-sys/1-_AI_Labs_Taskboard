@@ -1,22 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireObjectiveAccess } from '@/lib/auth/permissions';
 import { parseIsoDateRange } from '@/lib/okrs/dates';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ objectiveId: string; krId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  const { objectiveId, krId } = await params;
-  const body = await request.json();
-  const { title, target, current, unit, startDate, endDate } = body;
+  const { session, response } = await requireSession();
+  if (response) return response;
 
-  const existing = await prisma.keyResult.findFirst({ where: { id: krId, objectiveId } });
-  if (!existing) {
+  const { objectiveId, krId } = await params;
+
+  const { response: objectiveResponse } = await requireObjectiveAccess(session, objectiveId);
+  if (objectiveResponse) return objectiveResponse;
+
+  const existing = await prisma.keyResult.findUnique({ where: { id: krId } });
+  if (!existing || existing.objectiveId !== objectiveId) {
     return NextResponse.json({ error: 'Key result not found' }, { status: 404 });
   }
+
+  const body = await request.json();
+  const { title, target, current, unit, startDate, endDate } = body;
 
   let dateRange = null;
   if (startDate !== undefined || endDate !== undefined) {
@@ -87,13 +92,19 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ objectiveId: string; krId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const { session, response } = await requireSession();
+  if (response) return response;
+
   const { objectiveId, krId } = await params;
-  const existing = await prisma.keyResult.findFirst({ where: { id: krId, objectiveId } });
-  if (!existing) {
+
+  const { response: objectiveResponse } = await requireObjectiveAccess(session, objectiveId);
+  if (objectiveResponse) return objectiveResponse;
+
+  const existing = await prisma.keyResult.findUnique({ where: { id: krId } });
+  if (!existing || existing.objectiveId !== objectiveId) {
     return NextResponse.json({ error: 'Key result not found' }, { status: 404 });
   }
+
   await prisma.keyResult.delete({ where: { id: krId } });
   return NextResponse.json({ ok: true });
 }

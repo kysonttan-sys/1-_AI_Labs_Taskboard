@@ -1,8 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireCardAccess } from '@/lib/auth/permissions';
 import { createNotification } from '@/lib/notifications';
 import { createActivityEvent } from '@/lib/activity';
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ cardId: string }> }
+) {
+  const { cardId } = await params;
+
+  const { session, response: sessionResponse } = await requireSession();
+  if (sessionResponse) return sessionResponse;
+
+  const { response: accessResponse } = await requireCardAccess(session, cardId);
+  if (accessResponse) return accessResponse;
+
+  const comments = await prisma.comment.findMany({
+    where: { cardId },
+    orderBy: { createdAt: 'asc' },
+    include: { author: true },
+  });
+
+  return NextResponse.json(comments);
+}
 
 export async function POST(
   request: NextRequest,
@@ -10,12 +31,13 @@ export async function POST(
 ) {
   const { cardId } = await params;
 
-  try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
+  const { session, response: sessionResponse } = await requireSession();
+  if (sessionResponse) return sessionResponse;
 
+  const { response: accessResponse } = await requireCardAccess(session, cardId);
+  if (accessResponse) return accessResponse;
+
+  try {
     const body = await request.json();
     const { text } = body;
 

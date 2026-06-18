@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { requireSession, requireCardAccess } from '@/lib/auth/permissions';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ cardId: string }> }
 ) {
   const { cardId } = await params;
+
+  const { session, response: sessionResponse } = await requireSession();
+  if (sessionResponse) return sessionResponse;
+
+  const { response: cardResponse } = await requireCardAccess(session, cardId);
+  if (cardResponse) return cardResponse;
+
   const body = await request.json();
   const { dependsOnCardId } = body;
 

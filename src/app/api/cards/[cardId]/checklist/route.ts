@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
+import { requireCardAccess, requireSession } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,17 +10,18 @@ export async function POST(
 ) {
   const { cardId } = await params;
 
+  const { session, response: sessionResponse } = await requireSession();
+  if (sessionResponse) return sessionResponse;
+
+  const { response: accessResponse } = await requireCardAccess(session, cardId);
+  if (accessResponse) return accessResponse;
+
   try {
     const body = await request.json();
     const { text, position } = body;
 
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
-    }
-
-    const card = await prisma.card.findUnique({ where: { id: cardId } });
-    if (!card) {
-      return NextResponse.json({ error: 'Card not found' }, { status: 404 });
     }
 
     const maxPosition = await prisma.checklistItem.aggregate({

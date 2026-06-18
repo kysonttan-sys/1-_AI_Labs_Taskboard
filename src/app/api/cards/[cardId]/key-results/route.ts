@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireCardAccess, requireSession } from '@/lib/auth/permissions';
 import { createActivityEvent } from '@/lib/activity';
 import { recomputeLinkedKeyResults } from '../_recompute';
 
@@ -8,7 +8,14 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ cardId: string }> }
 ) {
+  const { session, response: authResponse } = await requireSession();
+  if (authResponse) return authResponse;
+
   const { cardId } = await params;
+
+  const { response: cardResponse } = await requireCardAccess(session, cardId);
+  if (cardResponse) return cardResponse;
+
   const body = await request.json();
   const { keyResultId, weight = 1 } = body;
 
@@ -52,10 +59,9 @@ export async function POST(
 
   await recomputeLinkedKeyResults(cardId);
 
-  const session = await getSession();
   await createActivityEvent({
     type: 'okr_linked',
-    actorId: session?.userId,
+    actorId: session.userId,
     boardId: card.boardId,
     cardId,
     metadata: { keyResultTitle: kr.title, objectiveTitle: kr.objective.title },

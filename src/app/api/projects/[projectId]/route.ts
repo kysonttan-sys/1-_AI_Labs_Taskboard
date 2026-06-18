@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireProjectAccess } from '@/lib/auth/permissions';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const { session, response } = await requireSession();
+  if (response) return response;
+
   const { projectId } = await params;
+  const access = await requireProjectAccess(session, projectId);
+  if (access.response) return access.response;
 
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -21,10 +24,6 @@ export async function GET(
     },
   });
 
-  if (!project) {
-    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-  }
-
   return NextResponse.json(project);
 }
 
@@ -32,16 +31,15 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const { session, response } = await requireSession();
+  if (response) return response;
+
   const { projectId } = await params;
+  const access = await requireProjectAccess(session, projectId);
+  if (access.response) return access.response;
+
   const body = await request.json();
   const { name, description } = body;
-
-  const existing = await prisma.project.findUnique({ where: { id: projectId } });
-  if (!existing) {
-    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-  }
 
   if (name !== undefined) {
     if (typeof name !== 'string' || name.trim() === '') {
@@ -67,14 +65,12 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  const { projectId } = await params;
+  const { session, response } = await requireSession();
+  if (response) return response;
 
-  const project = await prisma.project.findUnique({ where: { id: projectId } });
-  if (!project) {
-    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-  }
+  const { projectId } = await params;
+  const access = await requireProjectAccess(session, projectId);
+  if (access.response) return access.response;
 
   await prisma.project.delete({ where: { id: projectId } });
 

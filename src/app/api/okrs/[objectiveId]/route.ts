@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireObjectiveAccess } from '@/lib/auth/permissions';
 import type { Objective, KeyResult, LinkedTask } from '@/lib/api/okrs';
 
 function serializeKeyResult(kr: any): KeyResult {
@@ -47,9 +47,11 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ objectiveId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
   const { objectiveId } = await params;
+  const access = await requireObjectiveAccess(auth.session, objectiveId);
+  if (access.response) return access.response;
   const objective = await prisma.objective.findUnique({
     where: { id: objectiveId },
     include: {
@@ -73,9 +75,11 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ objectiveId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
   const { objectiveId } = await params;
+  const access = await requireObjectiveAccess(auth.session, objectiveId);
+  if (access.response) return access.response;
   const body = await request.json();
   const { title, description, startDate, endDate } = body;
 
@@ -134,9 +138,11 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ objectiveId: string }> }
 ) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.response) return auth.response;
   const { objectiveId } = await params;
+  const access = await requireObjectiveAccess(auth.session, objectiveId);
+  if (access.response) return access.response;
   const existing = await prisma.objective.findUnique({ where: { id: objectiveId } });
   if (!existing) {
     return NextResponse.json({ error: 'Objective not found' }, { status: 404 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
+import { requireBoardAccess } from '@/lib/auth/permissions';
 import { createNotification } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
@@ -14,6 +15,9 @@ export async function GET(request: NextRequest) {
   if (!boardId) {
     return NextResponse.json({ error: 'boardId is required' }, { status: 400 });
   }
+
+  const { response: boardResponse } = await requireBoardAccess(session, boardId);
+  if (boardResponse) return boardResponse;
 
   const messages = await prisma.chatMessage.findMany({
     where: { boardId },
@@ -42,6 +46,9 @@ export async function POST(request: NextRequest) {
   if (!boardId) {
     return NextResponse.json({ error: 'boardId is required' }, { status: 400 });
   }
+
+  const { response: boardResponse } = await requireBoardAccess(session, boardId);
+  if (boardResponse) return boardResponse;
 
   const message = await prisma.chatMessage.create({
     data: {

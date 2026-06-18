@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { getSession } from '@/lib/auth/session';
+import { requireSession, requireListAccess } from '@/lib/auth/permissions';
 import { createActivityEvent } from '@/lib/activity';
 
 export const dynamic = 'force-dynamic';
@@ -10,11 +10,17 @@ export async function PATCH(
   { params }: { params: Promise<{ listId: string }> }
 ) {
   const { listId } = await params;
+
+  const { session, response: sessionResponse } = await requireSession();
+  if (sessionResponse) return sessionResponse;
+
+  const { list: beforeList, response: listResponse } = await requireListAccess(session, listId);
+  if (listResponse) return listResponse;
+
   const body = await request.json();
   const { title, position } = body;
 
   try {
-    const before = await prisma.list.findUnique({ where: { id: listId } });
     const list = await prisma.list.update({
       where: { id: listId },
       data: {
@@ -22,14 +28,13 @@ export async function PATCH(
         ...(position !== undefined && { position }),
       },
     });
-    if (title !== undefined && title !== before?.title) {
-      const session = await getSession();
+    if (title !== undefined && title !== beforeList.title) {
       await createActivityEvent({
         type: 'list_renamed',
-        actorId: session?.userId,
+        actorId: session.userId,
         boardId: list.boardId,
         listId,
-        metadata: { from: before?.title, to: list.title },
+        metadata: { from: beforeList.title, to: list.title },
       });
     }
     return NextResponse.json(list);
@@ -44,19 +49,21 @@ export async function DELETE(
 ) {
   const { listId } = await params;
 
+  const { session, response: sessionResponse } = await requireSession();
+  if (sessionResponse) return sessionResponse;
+
+  const { list, response: listResponse } = await requireListAccess(session, listId);
+  if (listResponse) return listResponse;
+
   try {
-    const session = await getSession();
-    const list = await prisma.list.findUnique({ where: { id: listId } });
     await prisma.list.delete({ where: { id: listId } });
-    if (list) {
-      await createActivityEvent({
-        type: 'list_deleted',
-        actorId: session?.userId,
-        boardId: list.boardId,
-        listId,
-        metadata: { title: list.title },
-      });
-    }
+    await createActivityEvent({
+      type: 'list_deleted',
+      actorId: session.userId,
+      boardId: list.boardId,
+      listId,
+      metadata: { title: list.title },
+    });
     return new NextResponse(null, { status: 204 });
   } catch {
     return NextResponse.json({ error: 'List not found' }, { status: 404 });

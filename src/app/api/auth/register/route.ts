@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { hashPin } from '@/lib/auth/pin';
 import { createSessionToken, COOKIE_OPTIONS } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/permissions';
 import { isRateLimited, getRateLimitKey } from '@/lib/security/rateLimit';
 import { isNonEmptyString } from '@/lib/security/input';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
+
   try {
     if (isRateLimited(getRateLimitKey(request, 'register'))) {
       return NextResponse.json(
