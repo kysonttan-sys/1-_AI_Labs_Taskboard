@@ -78,6 +78,7 @@ export async function PATCH(
     dueDate,
     assigneeIds,
     listId,
+    boardId,
     position,
     labelIds,
   } = body;
@@ -103,53 +104,67 @@ export async function PATCH(
       return NextResponse.json({ error: 'Card not found' }, { status: 404 });
     }
 
-    // Cross-board/cross-project prevention for listId and labelIds
-    if (listId !== undefined) {
-      const list = await prisma.list.findUnique({
-        where: { id: listId },
-        select: { boardId: true },
-      });
-      if (!list || list.boardId !== before.boardId) {
-        return NextResponse.json({ error: "listId does not belong to this card's board" }, { status: 400 });
-      }
-    }
+    // Determine target board
+    const targetBoardId = typeof boardId === 'string' && boardId !== '' ? boardId : before.boardId;
+    const isCrossBoardMove = targetBoardId !== before.boardId;
 
-    if (labelIds !== undefined) {
-      const labels = await prisma.label.findMany({
-        where: { id: { in: labelIds as string[] } },
-        select: { id: true, boardId: true },
+    if (isCrossBoardMove) {
+      const targetBoard = await prisma.board.findUnique({
+        where: { id: targetBoardId },
+        select: { id: true, projectId: true },
       });
-      const allExist = labels.length === (labelIds as string[]).length;
-      const allSameBoard = labels.every((label) => label.boardId === before.boardId);
-      if (!allExist || !allSameBoard) {
-        return NextResponse.json({ error: "labelIds must belong to this card's board" }, { status: 400 });
+      if (!targetBoard) {
+        return NextResponse.json({ error: 'Target board not found' }, { status: 404 });
+      }
+      const sourceBoard = await prisma.board.findUnique({
+        where: { id: before.boardId },
+        select: { projectId: true },
+      });
+      if (!sourceBoard || sourceBoard.projectId !== targetBoard.projectId) {
+        return NextResponse.json({ error: 'Target board must belong to the same project' }, { status: 400 });
       }
     }
 
     let resolvedListId: string | undefined = listId;
+    const resolvedBoardId: string | undefined = isCrossBoardMove ? targetBoardId : undefined;
     let resolvedStatus: string | undefined = status;
 
+    // Resolve target list and status
     if (resolvedListId !== undefined && resolvedListId !== before.listId) {
       const targetList = await prisma.list.findUnique({
         where: { id: resolvedListId },
         select: { title: true, boardId: true },
       });
-      if (!targetList || targetList.boardId !== before.boardId) {
-        return NextResponse.json({ error: "listId does not belong to this card's board" }, { status: 400 });
+      if (!targetList || targetList.boardId !== targetBoardId) {
+        return NextResponse.json({ error: "listId does not belong to the target board" }, { status: 400 });
       }
       resolvedStatus = targetList.title;
-    } else if (status !== undefined && status !== before.status && resolvedListId === undefined) {
-      // If a manual status change matches another list title, move the card there.
+    } else if (isCrossBoardMove || (status !== undefined && status !== before.status && resolvedListId === undefined)) {
+      // Cross-board move or a manual status change that may match a list title.
+      const statusToMatch = resolvedStatus ?? before.status;
       const matchingList = await prisma.list.findFirst({
         where: {
-          boardId: before.boardId,
-          title: { equals: status, mode: 'insensitive' },
+          boardId: targetBoardId,
+          title: { equals: statusToMatch, mode: 'insensitive' },
         },
         select: { id: true, title: true },
+        orderBy: { position: 'asc' },
       });
       if (matchingList) {
         resolvedListId = matchingList.id;
         resolvedStatus = matchingList.title;
+      } else if (isCrossBoardMove) {
+        // Fall back to the first list of the target board for cross-board moves
+        const firstList = await prisma.list.findFirst({
+          where: { boardId: targetBoardId },
+          select: { id: true, title: true },
+          orderBy: { position: 'asc' },
+        });
+        if (!firstList) {
+          return NextResponse.json({ error: 'Target board has no lists' }, { status: 400 });
+        }
+        resolvedListId = firstList.id;
+        resolvedStatus = firstList.title;
       }
     }
 
@@ -165,8 +180,10 @@ export async function PATCH(
     if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
     if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
     if (resolvedListId !== undefined) updateData.listId = resolvedListId;
+    if (resolvedBoardId !== undefined) updateData.boardId = resolvedBoardId;
     if (resolvedStatus !== undefined) {
       updateData.completedAt = isCompletedStatus(finalStatus) ? new Date() : null;
+      if (isCompletedStatus(finalStatus)) updateData.progress = 100;
     }
     if (!shouldMoveList && position !== undefined) updateData.position = position;
 
@@ -179,11 +196,20 @@ export async function PATCH(
     }
 
     // Handle label synchronization
+    // Labels are board-scoped. For cross-board moves, clear old labels and only keep labels that belong to the target board.
     if (labelIds !== undefined) {
+      const targetBoardIdForLabels = resolvedBoardId ?? before.boardId;
+      const labels = await prisma.label.findMany({
+        where: { id: { in: labelIds as string[] } },
+        select: { id: true, boardId: true },
+      });
+      const validLabelIds = labels.filter((l) => l.boardId === targetBoardIdForLabels).map((l) => l.id);
       updateData.labels = {
         deleteMany: {},
-        create: (labelIds as string[]).map((labelId: string) => ({ labelId })),
+        create: validLabelIds.map((labelId: string) => ({ labelId })),
       };
+    } else if (isCrossBoardMove) {
+      updateData.labels = { deleteMany: {} };
     }
 
     let card;
@@ -216,7 +242,8 @@ export async function PATCH(
         });
 
         // Reindex both source and target lists so positions stay gap-free
-        for (const lid of [before.listId, resolvedListId!]) {
+        const listsToReindex = new Set<string>([before.listId, resolvedListId!]);
+        for (const lid of Array.from(listsToReindex)) {
           const cardsInList = await tx.card.findMany({
             where: { listId: lid },
             orderBy: { position: 'asc' },
@@ -315,12 +342,13 @@ export async function PATCH(
       if (startDate !== undefined) metadata.startDate = true;
       if (dueDate !== undefined) metadata.dueDate = true;
       if (resolvedListId !== undefined && resolvedListId !== before.listId) metadata.listId = { from: before.listId, to: resolvedListId };
+      if (resolvedBoardId !== undefined && resolvedBoardId !== before.boardId) metadata.boardId = { from: before.boardId, to: resolvedBoardId };
 
       if (Object.keys(metadata).length > 0) {
         await createActivityEvent({
           type: resolvedListId !== undefined && resolvedListId !== before.listId ? 'card_moved' : 'card_updated',
           actorId: triggerUserId,
-          boardId: before.boardId,
+          boardId: isCrossBoardMove ? targetBoardId : before.boardId,
           cardId: card.id,
           listId: card.listId,
           metadata: { ...metadata, title: card.title },
@@ -328,6 +356,9 @@ export async function PATCH(
       }
 
       broadcastToBoard(before.boardId, 'card-updated', { cardId: card.id, userId: triggerUserId });
+      if (isCrossBoardMove) {
+        broadcastToBoard(targetBoardId, 'card-updated', { cardId: card.id, userId: triggerUserId });
+      }
     }
 
     return NextResponse.json(card);

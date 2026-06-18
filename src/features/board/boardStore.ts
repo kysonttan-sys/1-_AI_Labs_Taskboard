@@ -256,7 +256,11 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         dependsOn: updated.dependsOn ?? base.dependsOn,
       });
 
-      if (prevListId && targetListId && prevListId !== targetListId) {
+      const targetBoardId = updated.boardId as string | undefined;
+      const prevBoardId = prevList?.boardId;
+      const isCrossBoardMove = targetBoardId !== undefined && targetBoardId !== prevBoardId;
+
+      if (prevListId && targetListId && (prevListId !== targetListId || isCrossBoardMove)) {
         const baseCard = prevList.cards.find((c) => c.id === id);
         if (!baseCard) {
           return {
@@ -267,6 +271,16 @@ export const useBoardStore = create<BoardState>((set, get) => ({
           };
         }
         const movedCard = mergeCard(baseCard);
+        // If target list isn't loaded yet (e.g., another board not fetched), try to find it in the store.
+        const targetList = s.lists.find((l) => l.id === targetListId);
+        if (!targetList) {
+          // Target list not loaded; just remove from old list. Card will appear when target board is fetched.
+          return {
+            lists: s.lists.map((l) =>
+              l.id === prevListId ? { ...l, cards: l.cards.filter((c) => c.id !== id) } : l
+            ),
+          };
+        }
         return {
           lists: s.lists.map((l) => {
             if (l.id === prevListId) {

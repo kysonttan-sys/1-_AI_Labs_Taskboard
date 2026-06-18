@@ -43,22 +43,32 @@ interface CardDetailModalProps {
 }
 
 export default function CardDetailModal({ card, onClose }: CardDetailModalProps) {
-  const { updateCard, deleteCard, lists } = useBoardStore();
+  const { updateCard, deleteCard, lists, boards } = useBoardStore();
+  const currentBoard = boards.find((b) => b.id === card.boardId);
+  const projectBoards = React.useMemo(
+    () => boards.filter((b) => b.projectId === currentBoard?.projectId).sort((a, b) => a.name.localeCompare(b.name)),
+    [boards, currentBoard?.projectId]
+  );
+
+  const [selectedBoardId, setSelectedBoardId] = useState(card.boardId);
+  useEffect(() => setSelectedBoardId(card.boardId), [card.boardId]);
+
   const listStatusOptions = React.useMemo(() => {
     const seen = new Set<string>();
     const opts = lists
-      .filter((l) => l.boardId === card.boardId)
+      .filter((l) => l.boardId === selectedBoardId)
       .map((l) => ({ value: l.title, label: l.title }))
       .filter((opt) => {
         if (seen.has(opt.value)) return false;
         seen.add(opt.value);
         return true;
       });
-    if (card.status && !seen.has(card.status)) {
+    if (card.status && !seen.has(card.status) && selectedBoardId === card.boardId) {
       opts.push({ value: card.status, label: card.status });
     }
     return opts;
-  }, [lists, card.boardId, card.status]);
+  }, [lists, selectedBoardId, card.status, card.boardId]);
+
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description ?? '');
@@ -170,10 +180,41 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
     }
   }
 
+  // Board
+  function handleBoardChange(boardId: string) {
+    setSelectedBoardId(boardId);
+    const targetLists = lists.filter((l) => l.boardId === boardId);
+    const matchingList = targetLists.find((l) => l.title.toLowerCase() === status.toLowerCase());
+    const targetList = matchingList ?? targetLists[0];
+    if (targetList) {
+      setStatus(targetList.title);
+    }
+  }
+
+  function commitBoardChange(boardId: string) {
+    const targetLists = lists.filter((l) => l.boardId === boardId);
+    const matchingList = targetLists.find((l) => l.title.toLowerCase() === status.toLowerCase());
+    const targetList = matchingList ?? targetLists[0];
+    if (targetList) {
+      const nextStatus = targetList.title;
+      setStatus(nextStatus);
+      persist({
+        boardId,
+        listId: targetList.id,
+        status: nextStatus,
+      });
+    }
+  }
+
   // Status
   function handleStatusChange(val: string) {
     setStatus(val);
-    persist({ status: val });
+    const targetList = lists.find((l) => l.boardId === selectedBoardId && l.title === val);
+    if (targetList) {
+      persist({ status: val, listId: targetList.id, boardId: selectedBoardId });
+    } else {
+      persist({ status: val, boardId: selectedBoardId });
+    }
   }
 
   // Priority
@@ -299,8 +340,30 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
             />
           </div>
 
-          {/* Status & Priority row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {/* Board, Status & Priority row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            {/* Board */}
+            <div>
+              <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-1 block">
+                Board
+              </label>
+              <select
+                value={selectedBoardId}
+                onChange={(e) => {
+                  const boardId = e.target.value;
+                  handleBoardChange(boardId);
+                  commitBoardChange(boardId);
+                }}
+                className="w-full bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] focus-ring appearance-none"
+              >
+                {projectBoards.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.icon} {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Status */}
             <div>
               <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-1 block">
