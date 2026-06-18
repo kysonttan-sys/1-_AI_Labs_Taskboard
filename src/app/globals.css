@@ -10,6 +10,7 @@ html[data-theme="light"],
   --bg-base: #f4f4f5;
   --bg-elevated: #e8e8eb;
   --bg-surface: #ffffff;
+  --bg-card: #ffffff;
   --bg-hover: #d4d4d8;
   --border: #d4d4d8;
   --border-hover: #a1a1aa;
@@ -31,6 +32,7 @@ html[data-theme="dark"] {
   --bg-base: #0c0c0e;
   --bg-elevated: #141416;
   --bg-surface: #1c1c20;
+  --bg-card: #1c1c20;
   --bg-hover: #26262a;
   --border: #2c2c32;
   --border-hover: #40404a;
