@@ -9,12 +9,14 @@ interface User {
   name: string;
   color: string;
   role: string;
+  jobTitle: string | null;
 }
 
 export default function SettingsPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberPin, setNewMemberPin] = useState('');
+  const [newMemberJobTitle, setNewMemberJobTitle] = useState('');
   const [googleConnected, setGoogleConnected] = useState(false);
 
   useEffect(() => {
@@ -33,10 +35,15 @@ export default function SettingsPage() {
     await fetch('/api/team', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newMemberName.trim(), pin: newMemberPin.trim() }),
+      body: JSON.stringify({
+        name: newMemberName.trim(),
+        pin: newMemberPin.trim(),
+        jobTitle: newMemberJobTitle.trim(),
+      }),
     });
     setNewMemberName('');
     setNewMemberPin('');
+    setNewMemberJobTitle('');
     loadUsers();
   }
 
@@ -49,6 +56,19 @@ export default function SettingsPage() {
     if (!res.ok) {
       const data = await res.json();
       alert(data.error || 'Failed to update role');
+    }
+    loadUsers();
+  }
+
+  async function updateJobTitle(id: string, jobTitle: string) {
+    const res = await fetch('/api/team', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: id, jobTitle }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || 'Failed to update job title');
     }
     loadUsers();
   }
@@ -150,7 +170,14 @@ export default function SettingsPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-[var(--text-primary)] truncate">{user.name}</p>
-                <p className="text-xs text-[var(--text-tertiary)]">{user.role}</p>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    value={user.jobTitle || ''}
+                    onChange={(e) => updateJobTitle(user.id, e.target.value)}
+                    placeholder="Job title"
+                    className="w-full max-w-[160px] px-1.5 py-0.5 bg-transparent border border-transparent hover:border-[var(--border)] focus:border-[var(--border)] rounded text-xs text-[var(--text-tertiary)] focus:text-[var(--text-secondary)] focus:bg-[var(--bg-base)] transition-colors focus-ring"
+                  />
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
@@ -203,6 +230,13 @@ export default function SettingsPage() {
               onChange={(e) => setNewMemberPin(e.target.value)}
               placeholder="PIN"
               className="w-full sm:w-24 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
+            />
+            <input
+              type="text"
+              value={newMemberJobTitle}
+              onChange={(e) => setNewMemberJobTitle(e.target.value)}
+              placeholder="Job title"
+              className="flex-1 px-3 py-2 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-[var(--text-primary)] text-sm focus-ring"
             />
             <button
               onClick={addMember}
