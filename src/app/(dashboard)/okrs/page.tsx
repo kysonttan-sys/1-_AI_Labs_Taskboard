@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db/client';
 import ObjectiveList, { type SerializedObjective } from './ObjectiveList';
+import type { LinkedTask } from '@/lib/api/okrs';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +11,16 @@ export default async function OkrsPage() {
   try {
     const rows = await prisma.objective.findMany({
       orderBy: [{ position: 'asc' }, { endDate: 'asc' }],
-      include: { keyResults: { orderBy: { position: 'asc' } } },
+      include: {
+        keyResults: {
+          orderBy: { position: 'asc' },
+          include: {
+            cards: {
+              include: { card: true },
+            },
+          },
+        },
+      },
     });
     objectives = rows.map((o) => ({
       id: o.id,
@@ -31,8 +41,18 @@ export default async function OkrsPage() {
         unit: kr.unit,
         position: kr.position,
         objectiveId: kr.objectiveId,
+        startDate: kr.startDate.toISOString(),
+        endDate: kr.endDate.toISOString(),
         createdAt: kr.createdAt.toISOString(),
         updatedAt: kr.updatedAt.toISOString(),
+        cards: kr.cards.map(({ card }) => ({
+          id: card.id,
+          title: card.title,
+          status: card.status as LinkedTask['status'],
+          listId: card.listId,
+          boardId: card.boardId,
+          dueDate: card.dueDate?.toISOString() ?? null,
+        })),
       })),
     }));
   } catch (e) {

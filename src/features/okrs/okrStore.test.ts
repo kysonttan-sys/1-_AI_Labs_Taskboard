@@ -46,6 +46,8 @@ function makeKr(overrides: Partial<KeyResult> = {}): KeyResult {
     unit: null,
     position: 0,
     objectiveId: 'obj-1',
+    startDate: '2026-07-01T00:00:00Z',
+    endDate: '2026-07-31T00:00:00Z',
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,

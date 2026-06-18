@@ -47,7 +47,7 @@ describe('POST /api/okrs/[objectiveId]/key-results', () => {
     });
     const { POST } = await import('./route');
     const res = await POST(
-      mockRequest({ title: 'New KR', target: 100, unit: 'users' }),
+      mockRequest({ title: 'New KR', target: 100, unit: 'users', startDate: '2026-07-01', endDate: '2026-07-31' }),
       { params: Promise.resolve({ objectiveId: obj.id }) } as any
     );
     expect(res.status).toBe(201);
@@ -64,7 +64,7 @@ describe('POST /api/okrs/[objectiveId]/key-results', () => {
     });
     const { POST } = await import('./route');
     const res = await POST(
-      mockRequest({ target: 10 }),
+      mockRequest({ target: 10, startDate: '2026-07-01', endDate: '2026-07-31' }),
       { params: Promise.resolve({ objectiveId: obj.id }) } as any
     );
     expect(res.status).toBe(400);
@@ -76,7 +76,7 @@ describe('POST /api/okrs/[objectiveId]/key-results', () => {
     });
     const { POST } = await import('./route');
     const res = await POST(
-      mockRequest({ title: 'X', target: 0 }),
+      mockRequest({ title: 'X', target: 0, startDate: '2026-07-01', endDate: '2026-07-31' }),
       { params: Promise.resolve({ objectiveId: obj.id }) } as any
     );
     expect(res.status).toBe(400);
@@ -105,7 +105,7 @@ describe('POST /api/okrs/[objectiveId]/key-results', () => {
 
     const { POST } = await import('./route');
     const res = await POST(
-      mockRequest({ title: 'New', target: 5 }),
+      mockRequest({ title: 'New', target: 5, startDate: '2026-07-01', endDate: '2026-07-31' }),
       { params: Promise.resolve({ objectiveId: obj.id }) } as any
     );
     expect(res.status).toBe(201);
@@ -120,11 +120,23 @@ describe('POST /api/okrs/[objectiveId]/key-results', () => {
     });
     const { POST } = await import('./route');
     const res = await POST(
-      mockRequest({ title: 'Over', target: 10, current: 50 }),
+      mockRequest({ title: 'Over', target: 10, current: 50, startDate: '2026-07-01', endDate: '2026-07-31' }),
       { params: Promise.resolve({ objectiveId: obj.id }) } as any
     );
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/current.*target/i);
+  });
+
+  it('rejects endDate before startDate', async () => {
+    const obj = await prisma.objective.create({
+      data: { title: 'Test', startDate: new Date('2026-01-01'), endDate: new Date('2026-03-31'), projectId: testProjectId },
+    });
+    const { POST } = await import('./route');
+    const res = await POST(
+      mockRequest({ title: 'Bad dates', target: 100, startDate: '2026-07-31', endDate: '2026-07-01' }),
+      { params: Promise.resolve({ objectiveId: obj.id }) } as any
+    );
+    expect(res.status).toBe(400);
   });
 });

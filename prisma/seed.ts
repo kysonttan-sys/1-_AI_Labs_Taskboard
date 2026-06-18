@@ -159,9 +159,9 @@ async function main() {
       projectId: project.id,
       keyResults: {
         create: [
-          { title: 'Beta users', target: 500, current: 312, unit: 'users', position: 0 },
-          { title: 'NPS score', target: 50, current: 47, unit: 'pts', position: 1 },
-          { title: 'Critical bugs at launch', target: 0, current: 3, unit: 'bugs', position: 2 },
+          { title: 'Beta users', target: 500, current: 312, unit: 'users', position: 0, startDate: new Date('2026-04-01'), endDate: new Date('2026-06-30') },
+          { title: 'NPS score', target: 50, current: 47, unit: 'pts', position: 1, startDate: new Date('2026-04-01'), endDate: new Date('2026-06-30') },
+          { title: 'Critical bugs at launch', target: 0, current: 3, unit: 'bugs', position: 2, startDate: new Date('2026-04-01'), endDate: new Date('2026-06-30') },
         ],
       },
     },
@@ -177,8 +177,8 @@ async function main() {
       projectId: project.id,
       keyResults: {
         create: [
-          { title: 'Onboarding completion rate', target: 80, current: 64, unit: '%', position: 0 },
-          { title: 'Time to first board', target: 5, current: 7, unit: 'min', position: 1 },
+          { title: 'Onboarding completion rate', target: 80, current: 64, unit: '%', position: 0, startDate: new Date('2026-04-01'), endDate: new Date('2026-09-30') },
+          { title: 'Time to first board', target: 5, current: 7, unit: 'min', position: 1, startDate: new Date('2026-04-01'), endDate: new Date('2026-09-30') },
         ],
       },
     },
@@ -194,8 +194,8 @@ async function main() {
       projectId: project.id,
       keyResults: {
         create: [
-          { title: 'API endpoints shipped', target: 20, current: 0, unit: 'endpoints', position: 0 },
-          { title: 'API uptime', target: 99.9, current: 0, unit: '%', position: 1 },
+          { title: 'API endpoints shipped', target: 20, current: 0, unit: 'endpoints', position: 0, startDate: new Date('2026-07-01'), endDate: new Date('2026-12-31') },
+          { title: 'API uptime', target: 99.9, current: 0, unit: '%', position: 1, startDate: new Date('2026-07-01'), endDate: new Date('2026-12-31') },
         ],
       },
     },

@@ -2,8 +2,49 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
 import { Prisma } from '@/generated/prisma/client';
+import type { Objective, KeyResult, LinkedTask } from '@/lib/api/okrs';
 
 const MAX_POSITION_RETRIES = 5;
+
+function serializeKeyResult(kr: any): KeyResult {
+  return {
+    id: kr.id,
+    title: kr.title,
+    target: kr.target,
+    current: kr.current,
+    unit: kr.unit,
+    position: kr.position,
+    objectiveId: kr.objectiveId,
+    startDate: kr.startDate.toISOString(),
+    endDate: kr.endDate.toISOString(),
+    createdAt: kr.createdAt.toISOString(),
+    updatedAt: kr.updatedAt.toISOString(),
+    cards: (kr.cards ?? []).map(({ card }: any): LinkedTask => ({
+      id: card.id,
+      title: card.title,
+      status: card.status,
+      listId: card.listId,
+      boardId: card.boardId,
+      dueDate: card.dueDate?.toISOString() ?? null,
+    })),
+  };
+}
+
+function serializeObjective(o: any): Objective {
+  return {
+    id: o.id,
+    title: o.title,
+    description: o.description,
+    startDate: o.startDate.toISOString(),
+    endDate: o.endDate.toISOString(),
+    position: o.position,
+    ownerId: o.ownerId,
+    projectId: o.projectId,
+    createdAt: o.createdAt.toISOString(),
+    updatedAt: o.updatedAt.toISOString(),
+    keyResults: o.keyResults.map(serializeKeyResult),
+  };
+}
 
 export async function GET() {
   const session = await getSession();
@@ -11,10 +52,17 @@ export async function GET() {
   const objectives = await prisma.objective.findMany({
     orderBy: [{ position: 'asc' }, { endDate: 'asc' }],
     include: {
-      keyResults: { orderBy: { position: 'asc' } },
+      keyResults: {
+        orderBy: { position: 'asc' },
+        include: {
+          cards: {
+            include: { card: true },
+          },
+        },
+      },
     },
   });
-  return NextResponse.json(objectives);
+  return NextResponse.json(objectives.map(serializeObjective));
 }
 
 export async function POST(request: NextRequest) {
@@ -68,9 +116,18 @@ export async function POST(request: NextRequest) {
           position: nextPosition,
           projectId,
         },
-        include: { keyResults: { orderBy: { position: 'asc' } } },
+        include: {
+          keyResults: {
+            orderBy: { position: 'asc' },
+            include: {
+              cards: {
+                include: { card: true },
+              },
+            },
+          },
+        },
       });
-      return NextResponse.json(objective, { status: 201 });
+      return NextResponse.json(serializeObjective(objective), { status: 201 });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
         continue;

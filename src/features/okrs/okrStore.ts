@@ -6,6 +6,8 @@ import {
   type UpdateObjectiveInput,
   type CreateKeyResultInput,
   type UpdateKeyResultInput,
+  type LinkedTask,
+  type CreateKeyResultTaskInput,
 } from '@/lib/api/okrs';
 
 interface OkrState {
@@ -20,6 +22,7 @@ interface OkrState {
   updateKeyResult: (objectiveId: string, krId: string, input: UpdateKeyResultInput) => Promise<void>;
   deleteKeyResult: (objectiveId: string, krId: string) => Promise<void>;
   reorderKeyResults: (objectiveId: string, fromIndex: number, toIndex: number) => Promise<void>;
+  addKeyResultTask: (objectiveId: string, krId: string, input: CreateKeyResultTaskInput) => Promise<LinkedTask>;
 }
 
 // Per-KR request counter for last-write-wins semantics. Each in-flight
@@ -75,6 +78,25 @@ export const useOkrStore = create<OkrState>((set, get) => ({
         o.id === objectiveId ? { ...o, keyResults: [...o.keyResults, kr] } : o
       ),
     }));
+  },
+
+  addKeyResultTask: async (objectiveId, krId, input) => {
+    const { card } = await okrsApi.addKeyResultTask(objectiveId, krId, input);
+    set((s) => ({
+      objectives: s.objectives.map((o) =>
+        o.id === objectiveId
+          ? {
+              ...o,
+              keyResults: o.keyResults.map((kr) =>
+                kr.id === krId
+                  ? { ...kr, cards: [...(kr.cards ?? []), card] }
+                  : kr
+              ),
+            }
+          : o
+      ),
+    }));
+    return card;
   },
 
   updateKeyResult: async (objectiveId, krId, input) => {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
 import { Prisma } from '@/generated/prisma/client';
+import { parseIsoDateRange } from '@/lib/okrs/dates';
 
 const MAX_POSITION_RETRIES = 5;
 
@@ -13,7 +14,7 @@ export async function POST(
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const { objectiveId } = await params;
   const body = await request.json();
-  const { title, target, current, unit } = body;
+  const { title, target, current, unit, startDate, endDate } = body;
 
   if (!title || typeof title !== 'string' || title.trim() === '') {
     return NextResponse.json({ error: 'title is required' }, { status: 400 });
@@ -36,6 +37,14 @@ export async function POST(
   }
   if (unit !== undefined && unit !== null && (typeof unit !== 'string' || unit.length > 32)) {
     return NextResponse.json({ error: 'unit must be a string up to 32 characters' }, { status: 400 });
+  }
+
+  const dateRange = parseIsoDateRange(startDate, endDate);
+  if (!dateRange) {
+    return NextResponse.json(
+      { error: 'startDate and endDate are required and endDate must be on or after startDate' },
+      { status: 400 }
+    );
   }
 
   const objective = await prisma.objective.findUnique({ where: { id: objectiveId } });
@@ -63,6 +72,8 @@ export async function POST(
           unit: unit || null,
           objectiveId,
           position: nextPosition,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate,
         },
       });
       return NextResponse.json(kr, { status: 201 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { getSession } from '@/lib/auth/session';
+import { parseIsoDateRange } from '@/lib/okrs/dates';
 
 export async function PATCH(
   request: NextRequest,
@@ -10,11 +11,25 @@ export async function PATCH(
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const { objectiveId, krId } = await params;
   const body = await request.json();
-  const { title, target, current, unit } = body;
+  const { title, target, current, unit, startDate, endDate } = body;
 
   const existing = await prisma.keyResult.findFirst({ where: { id: krId, objectiveId } });
   if (!existing) {
     return NextResponse.json({ error: 'Key result not found' }, { status: 404 });
+  }
+
+  let dateRange = null;
+  if (startDate !== undefined || endDate !== undefined) {
+    dateRange = parseIsoDateRange(
+      startDate !== undefined ? startDate : existing.startDate.toISOString(),
+      endDate !== undefined ? endDate : existing.endDate.toISOString()
+    );
+    if (!dateRange) {
+      return NextResponse.json(
+        { error: 'startDate and endDate must be valid and endDate must be on or after startDate' },
+        { status: 400 }
+      );
+    }
   }
 
   if (title !== undefined) {
@@ -61,6 +76,7 @@ export async function PATCH(
       ...(target !== undefined && { target }),
       ...(current !== undefined && { current }),
       ...(unit !== undefined && { unit: unit || null }),
+      ...(dateRange && { startDate: dateRange.startDate, endDate: dateRange.endDate }),
     },
   });
 

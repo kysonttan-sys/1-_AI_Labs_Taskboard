@@ -48,7 +48,7 @@ describe('GET /api/okrs/[objectiveId]', () => {
         startDate: new Date('2026-01-01'),
         endDate: new Date('2026-03-31'),
         projectId: testProjectId,
-        keyResults: { create: [{ title: 'KR 1', target: 10, current: 5 }] },
+        keyResults: { create: [{ title: 'KR 1', target: 10, current: 5, startDate: new Date('2026-07-01'), endDate: new Date('2026-07-31') }] },
       },
     });
     const { GET } = await import('./route');
@@ -106,7 +106,7 @@ describe('DELETE /api/okrs/[objectiveId]', () => {
         startDate: new Date('2026-01-01'),
         endDate: new Date('2026-03-31'),
         projectId: testProjectId,
-        keyResults: { create: [{ title: 'KR 1', target: 10 }] },
+        keyResults: { create: [{ title: 'KR 1', target: 10, startDate: new Date('2026-07-01'), endDate: new Date('2026-07-31') }] },
       },
     });
     const { DELETE } = await import('./route');

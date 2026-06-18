@@ -6,8 +6,20 @@ export interface KeyResult {
   unit: string | null;
   position: number;
   objectiveId: string;
+  startDate: string;
+  endDate: string;
+  cards?: LinkedTask[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LinkedTask {
+  id: string;
+  title: string;
+  status: 'todo' | 'in_progress' | 'review' | 'done';
+  listId: string;
+  boardId: string;
+  dueDate: string | null;
 }
 
 export interface Objective {
@@ -39,9 +51,21 @@ export type CreateKeyResultInput = {
   target: number;
   current?: number;
   unit?: string;
+  startDate: string;
+  endDate: string;
 };
 
 export type UpdateKeyResultInput = Partial<CreateKeyResultInput>;
+
+export type CreateKeyResultTaskInput = {
+  title: string;
+  boardId?: string;
+  listId?: string;
+  newBoardName?: string;
+  newListName?: string;
+  description?: string;
+  dueDate?: string;
+};
 
 async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -90,4 +114,10 @@ export const okrsApi = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ krIds }),
     }).then((r) => handle<KeyResult[]>(r)),
+  addKeyResultTask: (objectiveId: string, krId: string, input: CreateKeyResultTaskInput) =>
+    fetch(`/api/okrs/${objectiveId}/key-results/${krId}/cards`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }).then((r) => handle<{ card: LinkedTask }>(r)),
 };

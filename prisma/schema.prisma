@@ -273,6 +273,8 @@ model KeyResult {
   objectiveId String
   objective   Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
   cards       CardKeyResult[]
+  startDate   DateTime
+  endDate     DateTime
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

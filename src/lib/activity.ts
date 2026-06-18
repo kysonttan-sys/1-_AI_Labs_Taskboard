@@ -12,7 +12,8 @@ export type ActivityEventType =
   | 'list_renamed'
   | 'list_deleted'
   | 'board_renamed'
-  | 'okr_linked';
+  | 'okr_linked'
+  | 'okr_task_created';
 
 interface CreateActivityParams {
   type: ActivityEventType;

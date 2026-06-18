@@ -46,13 +46,15 @@ async function makeObj() {
   });
 }
 
-async function makeKr(objId: string, overrides: Partial<{ title: string; target: number; current: number; unit: string | null }> = {}) {
+async function makeKr(objId: string, overrides: Partial<{ title: string; target: number; current: number; unit: string | null; startDate: Date; endDate: Date }> = {}) {
   return prisma.keyResult.create({
     data: {
       title: 'KR',
       target: 100,
       current: 0,
       objectiveId: objId,
+      startDate: new Date('2026-07-01'),
+      endDate: new Date('2026-07-31'),
       ...overrides,
     },
   });
@@ -118,6 +120,20 @@ describe('PATCH /api/okrs/[objectiveId]/key-results/[krId]', () => {
       { params: Promise.resolve({ objectiveId: obj.id, krId: kr.id }) } as any
     );
     expect(res.status).toBe(400);
+  });
+
+  it('updates startDate and endDate', async () => {
+    const obj = await makeObj();
+    const kr = await makeKr(obj.id);
+    const { PATCH } = await import('./route');
+    const res = await PATCH(
+      mockRequest({ startDate: '2026-08-01', endDate: '2026-08-31' }),
+      { params: Promise.resolve({ objectiveId: obj.id, krId: kr.id }) } as any
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.startDate).toContain('2026-08-01');
+    expect(body.endDate).toContain('2026-08-31');
   });
 });
 
