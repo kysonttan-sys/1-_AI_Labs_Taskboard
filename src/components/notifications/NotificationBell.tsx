@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Bell,
@@ -13,9 +13,11 @@ import {
   VolumeX,
   CheckCheck,
   X,
+  Activity,
 } from 'lucide-react';
 import { useNotificationStore } from '@/features/notifications/notificationStore';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import CompactActivityFeed from '@/components/activity/CompactActivityFeed';
 
 function getNotificationIcon(type: string) {
   switch (type) {
@@ -42,6 +44,12 @@ function getNotificationIcon(type: string) {
 
 export default function NotificationBell() {
   const router = useRouter();
+  const pathname = usePathname();
+  const [activeTab, setActiveTab] = useState<'notifications' | 'activity'>('notifications');
+
+  const boardIdMatch = pathname.match(/^\/board\/([^\/]+)/);
+  const boardId = boardIdMatch ? boardIdMatch[1] : undefined;
+
   const {
     notifications,
     unreadCount,
@@ -103,107 +111,143 @@ export default function NotificationBell() {
       {isDropdownOpen && (
         <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-h-[80vh] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-2xl z-50 flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Notifications</h3>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
+          <div className="flex flex-col border-b border-[var(--border)] shrink-0">
+            <div className="flex items-center justify-between px-4 py-3">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Updates</h3>
+              <div className="flex items-center gap-2">
+                {activeTab === 'notifications' && unreadCount > 0 && (
+                  <button
+                    onClick={() => markAllAsRead()}
+                    className="flex items-center gap-1 text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
+                    title="Mark all as read"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 <button
-                  onClick={() => markAllAsRead()}
-                  className="flex items-center gap-1 text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
-                  title="Mark all as read"
+                  onClick={() => setDropdownOpen(false)}
+                  className="p-1 rounded hover:bg-[var(--bg-base)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                 >
-                  <CheckCheck className="h-3.5 w-3.5" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
-              )}
+              </div>
+            </div>
+            <div className="flex px-2 pb-2 gap-1">
               <button
-                onClick={() => setDropdownOpen(false)}
-                className="p-1 rounded hover:bg-[var(--bg-base)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                onClick={() => setActiveTab('notifications')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors
+                  ${activeTab === 'notifications'
+                    ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-base)]'
+                  }`}
               >
-                <X className="h-3.5 w-3.5" />
+                <Bell className="h-3.5 w-3.5" />
+                Notifications
+                {unreadCount > 0 && (
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-red-500 text-[10px] font-bold text-[var(--text-primary)]">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('activity')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors
+                  ${activeTab === 'activity'
+                    ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-base)]'
+                  }`}
+              >
+                <Activity className="h-3.5 w-3.5" />
+                Activity
               </button>
             </div>
           </div>
 
-          {/* Notification list */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin">
-            {notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-[var(--text-tertiary)]">
-                <Bell className="h-8 w-8 mb-2 opacity-40" />
-                <p className="text-sm">No notifications yet</p>
-              </div>
-            ) : (
-              notifications.map((n) => (
-                <div
-                  key={n.id}
-                  onClick={() => handleNotificationClick(n)}
-                  className={`group flex items-start gap-3 px-4 py-3 border-b border-[var(--border)] last:border-0 cursor-pointer hover:bg-[var(--bg-card-hover)] transition-colors ${
-                    !n.read ? 'bg-[var(--accent)]/5' : ''
-                  }`}
-                >
-                  <div className="shrink-0 mt-0.5">{getNotificationIcon(n.type)}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className={`text-sm truncate ${!n.read ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
-                        {n.title}
-                      </p>
-                      {!n.read && (
-                        <span className="shrink-0 h-2 w-2 rounded-full bg-[var(--accent)]" />
-                      )}
-                    </div>
-                    {n.body && (
-                      <p className="text-xs text-[var(--text-tertiary)] mt-0.5 truncate">{n.body}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-1">
-                      {n.triggerUser && (
-                        <span className="text-[10px] text-[var(--text-tertiary)]">
-                          by {n.triggerUser.name}
-                        </span>
-                      )}
-                      <span className="text-[10px] text-[var(--text-tertiary)]">
-                        {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
-                      </span>
-                    </div>
+          {activeTab === 'notifications' ? (
+            <>
+              <div className="flex-1 overflow-y-auto scrollbar-thin">
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-[var(--text-tertiary)]">
+                    <Bell className="h-8 w-8 mb-2 opacity-40" />
+                    <p className="text-sm">No notifications yet</p>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteNotification(n.id);
-                    }}
-                    className="shrink-0 p-1 rounded hover:bg-[var(--bg-base)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Dismiss"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
+                ) : (
+                  notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => handleNotificationClick(n)}
+                      className={`group flex items-start gap-3 px-4 py-3 border-b border-[var(--border)] last:border-0 cursor-pointer hover:bg-[var(--bg-card-hover)] transition-colors ${
+                        !n.read ? 'bg-[var(--accent)]/5' : ''
+                      }`}
+                    >
+                      <div className="shrink-0 mt-0.5">{getNotificationIcon(n.type)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className={`text-sm truncate ${!n.read ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
+                            {n.title}
+                          </p>
+                          {!n.read && (
+                            <span className="shrink-0 h-2 w-2 rounded-full bg-[var(--accent)]" />
+                          )}
+                        </div>
+                        {n.body && (
+                          <p className="text-xs text-[var(--text-tertiary)] mt-0.5 truncate">{n.body}</p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          {n.triggerUser && (
+                            <span className="text-[10px] text-[var(--text-tertiary)]">
+                              by {n.triggerUser.name}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-[var(--text-tertiary)]">
+                            {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(n.id);
+                        }}
+                        className="shrink-0 p-1 rounded hover:bg-[var(--bg-base)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Dismiss"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between px-4 py-2.5 border-t border-[var(--border)] shrink-0">
-            <button
-              onClick={toggleSound}
-              className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
-            >
-              {soundEnabled ? (
-                <Volume2 className="h-3.5 w-3.5" />
-              ) : (
-                <VolumeX className="h-3.5 w-3.5" />
-              )}
-              Sound {soundEnabled ? 'on' : 'off'}
-            </button>
-            {!browserPermissionGranted && browserNotificationSupported && (
-              <button
-                onClick={requestBrowserPermission}
-                className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
-              >
-                Enable browser alerts
-              </button>
-            )}
-            {!browserNotificationSupported && (
-              <span className="text-[10px] text-[var(--text-tertiary)]">Alerts need HTTPS</span>
-            )}
-          </div>
+              {/* Footer */}
+              <div className="flex items-center justify-between px-4 py-2.5 border-t border-[var(--border)] shrink-0">
+                <button
+                  onClick={toggleSound}
+                  className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                >
+                  {soundEnabled ? (
+                    <Volume2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <VolumeX className="h-3.5 w-3.5" />
+                  )}
+                  Sound {soundEnabled ? 'on' : 'off'}
+                </button>
+                {!browserPermissionGranted && browserNotificationSupported && (
+                  <button
+                    onClick={requestBrowserPermission}
+                    className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
+                  >
+                    Enable browser alerts
+                  </button>
+                )}
+                {!browserNotificationSupported && (
+                  <span className="text-[10px] text-[var(--text-tertiary)]">Alerts need HTTPS</span>
+                )}
+              </div>
+            </>
+          ) : (
+            <CompactActivityFeed boardId={boardId} limit={30} />
+          )}
         </div>
       )}
     </div>

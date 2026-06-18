@@ -1,7 +1,6 @@
 'use client';
 
 import { CalendarDays } from 'lucide-react';
-import ActivityFeed from '@/components/activity/ActivityFeed';
 
 export default function DigestPage() {
   return (
@@ -17,8 +16,6 @@ export default function DigestPage() {
           This feature was powered by a local Ollama instance, which is not available in this deployment.
         </p>
       </div>
-
-      <ActivityFeed showBoard limit={20} />
     </div>
   );
 }
