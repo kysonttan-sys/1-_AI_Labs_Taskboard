@@ -154,6 +154,13 @@ export async function POST(
           listId: result.listId,
           boardId: result.boardId,
           dueDate: result.dueDate?.toISOString() ?? null,
+          assignees: result.assignees?.map(({ user }: any) => ({
+            user: {
+              id: user.id,
+              name: user.name,
+              color: user.color,
+            },
+          })) ?? [],
         },
       },
       { status: 201 }

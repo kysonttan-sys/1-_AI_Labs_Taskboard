@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useOkrStore } from '@/features/okrs/okrStore';
 import { pct, formatValue } from '@/features/okrs/progress';
-import { Trash2, Pencil, Check, X, ChevronUp, ChevronDown, Plus } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { Trash2, Pencil, Check, X, ChevronUp, ChevronDown, Plus, Calendar } from 'lucide-react';
 import StatusBadge from '@/components/board/StatusBadge';
 import type { LinkedTask, CreateKeyResultTaskInput } from '@/lib/api/okrs';
 import KeyResultTaskPicker from './KeyResultTaskPicker';
@@ -23,6 +24,11 @@ interface Kr {
 function formatDateRange(start: string, end: string) {
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
   return `${new Date(start).toLocaleDateString('en-US', opts)} – ${new Date(end).toLocaleDateString('en-US', opts)}`;
+}
+
+function formatTaskDueDate(dueDate: string | null) {
+  if (!dueDate) return null;
+  return format(parseISO(dueDate), 'MMM d, yyyy');
 }
 
 interface Props {
@@ -288,7 +294,39 @@ export default function KeyResultRow({ objectiveId, projectId, kr, index, total 
               className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-transparent hover:border-[var(--border)] transition-colors text-sm group"
             >
               <span className="truncate text-[var(--text-primary)]">{task.title}</span>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2.5 shrink-0">
+                {formatTaskDueDate(task.dueDate) && (
+                  <div className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]">
+                    <Calendar className="h-3 w-3" />
+                    <span>{formatTaskDueDate(task.dueDate)}</span>
+                  </div>
+                )}
+                {task.assignees && task.assignees.length > 0 && (
+                  <div className="flex items-center -space-x-1.5" title={task.assignees.map(({ user }) => user.name).join(', ')}>
+                    {task.assignees.slice(0, 3).map(({ user }) => {
+                      const initials = user.name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .slice(0, 2)
+                        .join('')
+                        .toUpperCase();
+                      return (
+                        <span
+                          key={user.id}
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-medium text-white ring-1 ring-[var(--bg-surface)]"
+                          style={{ backgroundColor: user.color || 'var(--accent)' }}
+                        >
+                          {initials}
+                        </span>
+                      );
+                    })}
+                    {task.assignees.length > 3 && (
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-medium text-[var(--text-secondary)] bg-[var(--bg-surface)] ring-1 ring-[var(--border)]">
+                        +{task.assignees.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <span className="text-[10px] text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]">
                   Open board →
                 </span>

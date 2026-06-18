@@ -20,6 +20,7 @@ export interface LinkedTask {
   listId: string;
   boardId: string;
   dueDate: string | null;
+  assignees: { user: { id: string; name: string; color: string } }[];
 }
 
 export interface Objective {

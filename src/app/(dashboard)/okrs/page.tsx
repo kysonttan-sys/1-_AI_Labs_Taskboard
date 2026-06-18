@@ -16,7 +16,13 @@ export default async function OkrsPage() {
           orderBy: { position: 'asc' },
           include: {
             cards: {
-              include: { card: true },
+              include: {
+                card: {
+                  include: {
+                    assignees: { include: { user: true } },
+                  },
+                },
+              },
             },
           },
         },
@@ -52,6 +58,13 @@ export default async function OkrsPage() {
           listId: card.listId,
           boardId: card.boardId,
           dueDate: card.dueDate?.toISOString() ?? null,
+          assignees: card.assignees?.map(({ user }) => ({
+            user: {
+              id: user.id,
+              name: user.name,
+              color: user.color,
+            },
+          })) ?? [],
         })),
       })),
     }));

@@ -26,6 +26,13 @@ function serializeKeyResult(kr: any): KeyResult {
       listId: card.listId,
       boardId: card.boardId,
       dueDate: card.dueDate?.toISOString() ?? null,
+      assignees: card.assignees?.map(({ user }: any) => ({
+        user: {
+          id: user.id,
+          name: user.name,
+          color: user.color,
+        },
+      })) ?? [],
     })),
   };
 }
@@ -56,7 +63,13 @@ export async function GET() {
         orderBy: { position: 'asc' },
         include: {
           cards: {
-            include: { card: true },
+            include: {
+              card: {
+                include: {
+                  assignees: { include: { user: true } },
+                },
+              },
+            },
           },
         },
       },
@@ -121,7 +134,13 @@ export async function POST(request: NextRequest) {
               orderBy: { position: 'asc' },
               include: {
                 cards: {
-                  include: { card: true },
+                  include: {
+                    card: {
+                      include: {
+                        assignees: { include: { user: true } },
+                      },
+                    },
+                  },
                 },
               },
             },
