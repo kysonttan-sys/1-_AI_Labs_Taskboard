@@ -14,7 +14,7 @@ import CardDependencyLinker from './CardDependencyLinker';
 import CardChecklist from './CardChecklist';
 import CardComments from './CardComments';
 import { useBoardStore } from '@/features/board/boardStore';
-import type { Card } from '@/types';
+import type { Card, List } from '@/types';
 import { getInitials } from '@/lib/utils/initials';
 
 interface UserOption {
@@ -51,12 +51,23 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
   );
 
   const [selectedBoardId, setSelectedBoardId] = useState(card.boardId);
-  useEffect(() => setSelectedBoardId(card.boardId), [card.boardId]);
+  const [targetLists, setTargetLists] = useState(lists.filter((l) => l.boardId === card.boardId));
+  useEffect(() => {
+    setSelectedBoardId(card.boardId);
+    setTargetLists(lists.filter((l) => l.boardId === card.boardId));
+  }, [card.boardId, lists]);
+
+  // Keep target lists in sync with cached lists when they update
+  useEffect(() => {
+    const listsForBoard = lists.filter((l) => l.boardId === selectedBoardId);
+    if (listsForBoard.length > 0) {
+      setTargetLists(listsForBoard);
+    }
+  }, [selectedBoardId, lists]);
 
   const listStatusOptions = React.useMemo(() => {
     const seen = new Set<string>();
-    const opts = lists
-      .filter((l) => l.boardId === selectedBoardId)
+    const opts = targetLists
       .map((l) => ({ value: l.title, label: l.title }))
       .filter((opt) => {
         if (seen.has(opt.value)) return false;
@@ -67,7 +78,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
       opts.push({ value: card.status, label: card.status });
     }
     return opts;
-  }, [lists, selectedBoardId, card.status, card.boardId]);
+  }, [targetLists, selectedBoardId, card.status, card.boardId]);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(card.title);
@@ -181,20 +192,21 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
   }
 
   // Board
-  function handleBoardChange(boardId: string) {
+  async function handleBoardChange(boardId: string) {
     setSelectedBoardId(boardId);
-    const targetLists = lists.filter((l) => l.boardId === boardId);
-    const matchingList = targetLists.find((l) => l.title.toLowerCase() === status.toLowerCase());
-    const targetList = matchingList ?? targetLists[0];
-    if (targetList) {
-      setStatus(targetList.title);
+    const cachedLists = lists.filter((l) => l.boardId === boardId);
+    let boardLists: List[] = cachedLists;
+    if (cachedLists.length === 0) {
+      try {
+        const data = await fetch(`/api/boards/${boardId}`).then((res) => res.json());
+        boardLists = Array.isArray(data.lists) ? data.lists : [];
+      } catch {
+        boardLists = [];
+      }
     }
-  }
-
-  function commitBoardChange(boardId: string) {
-    const targetLists = lists.filter((l) => l.boardId === boardId);
-    const matchingList = targetLists.find((l) => l.title.toLowerCase() === status.toLowerCase());
-    const targetList = matchingList ?? targetLists[0];
+    setTargetLists(boardLists);
+    const matchingList = boardLists.find((l) => l.title.toLowerCase() === status.toLowerCase());
+    const targetList = matchingList ?? boardLists[0];
     if (targetList) {
       const nextStatus = targetList.title;
       setStatus(nextStatus);
@@ -209,7 +221,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
   // Status
   function handleStatusChange(val: string) {
     setStatus(val);
-    const targetList = lists.find((l) => l.boardId === selectedBoardId && l.title === val);
+    const targetList = targetLists.find((l) => l.title === val);
     if (targetList) {
       persist({ status: val, listId: targetList.id, boardId: selectedBoardId });
     } else {
@@ -349,11 +361,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
               </label>
               <select
                 value={selectedBoardId}
-                onChange={(e) => {
-                  const boardId = e.target.value;
-                  handleBoardChange(boardId);
-                  commitBoardChange(boardId);
-                }}
+                onChange={(e) => handleBoardChange(e.target.value)}
                 className="w-full bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] focus-ring appearance-none"
               >
                 {projectBoards.map((b) => (
