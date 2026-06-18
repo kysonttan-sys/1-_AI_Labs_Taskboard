@@ -29,15 +29,24 @@ export async function PATCH(
     return NextResponse.json({ error: 'krIds must contain exactly the existing key result ids' }, { status: 400 });
   }
 
-  // Update positions in a transaction
-  await prisma.$transaction(
-    krIds.map((id, index) =>
-      prisma.keyResult.update({
-        where: { id },
-        data: { position: index },
-      })
-    )
-  );
+  // Update positions in a transaction. Because KeyResult has a unique
+  // constraint on (objectiveId, position), we must first move every row
+  // to a temporary negative position so that no two rows share a final
+  // position during the swap. Then we assign the final positions.
+  await prisma.$transaction(async (tx) => {
+    for (let i = 0; i < krIds.length; i++) {
+      await tx.keyResult.update({
+        where: { id: krIds[i] },
+        data: { position: -1 - i },
+      });
+    }
+    for (let i = 0; i < krIds.length; i++) {
+      await tx.keyResult.update({
+        where: { id: krIds[i] },
+        data: { position: i },
+      });
+    }
+  });
 
   const updated = await prisma.keyResult.findMany({
     where: { objectiveId },
