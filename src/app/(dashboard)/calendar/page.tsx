@@ -11,7 +11,7 @@ import GanttChartView from '@/components/calendar/GanttChart';
 import TeamMeeting from '@/components/meeting/TeamMeeting';
 
 export default function CalendarPage() {
-  const { view, currentDate, setView, goToPrevMonth, goToNextMonth } = useCalendarStore();
+  const { view, currentDate, setView, goToPrevMonth, goToNextMonth, fetchEvents } = useCalendarStore();
   const { fetchBoards, fetchAllBoardsData } = useBoardStore();
   const { objectives, fetchObjectives } = useOkrStore();
 
@@ -20,9 +20,10 @@ export default function CalendarPage() {
       await fetchBoards();
       await fetchAllBoardsData();
       await fetchObjectives();
+      await fetchEvents(currentDate);
     }
     load();
-  }, [fetchBoards, fetchAllBoardsData, fetchObjectives]);
+  }, [fetchBoards, fetchAllBoardsData, fetchObjectives, fetchEvents, currentDate]);
 
   return (
     <div className="flex flex-col h-full">

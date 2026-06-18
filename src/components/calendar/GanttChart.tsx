@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import {
   format,
   differenceInDays,
@@ -11,10 +11,13 @@ import {
 import { useCalendarStore } from '@/features/calendar/calendarStore';
 import { useBoardStore } from '@/features/board/boardStore';
 import { useOkrStore } from '@/features/okrs/okrStore';
-import { Briefcase, Target } from 'lucide-react';
+import { Briefcase, Target, Calendar, CheckSquare } from 'lucide-react';
 import type { Objective } from '@/lib/api/okrs';
+import type { CalendarEvent } from '@/types';
 
 type ZoomLevel = 'day' | 'week' | 'month';
+type GanttType = 'card' | 'objective' | 'event';
+type Visibility = { card: boolean; objective: boolean; event: boolean };
 
 const ZOOM_WIDTHS: Record<ZoomLevel, number> = {
   day: 40,
@@ -29,9 +32,15 @@ const PRIORITY_COLORS: Record<string, { dot: string; bg: string; bar: string }> 
   low: { dot: '#6b7280', bg: 'bg-gray-500/20', bar: 'bg-gray-500' },
 };
 
+const TYPE_META: Record<GanttType, { label: string; icon: typeof Calendar; fallback: string }> = {
+  card: { label: 'Tasks', icon: CheckSquare, fallback: '#6b7280' },
+  objective: { label: 'OKRs', icon: Target, fallback: '#a855f7' },
+  event: { label: 'Events', icon: Calendar, fallback: '#10b981' },
+};
+
 interface GanttItem {
   id: string;
-  type: 'card' | 'objective';
+  type: GanttType;
   title: string;
   startDate: string;
   endDate: string;
@@ -40,6 +49,9 @@ interface GanttItem {
     assignees?: { user: { name: string } }[];
     status?: string;
     progress?: number;
+    color?: string;
+    user?: { name: string };
+    allDay?: boolean;
   };
 }
 
@@ -48,15 +60,20 @@ interface Props {
 }
 
 export default function GanttChart({ objectives = [] }: Props) {
-  const { currentDate } = useCalendarStore();
+  const { currentDate, events, fetchEvents, updateEvent } = useCalendarStore();
   const { lists, activeBoardId } = useBoardStore();
   const { updateObjective } = useOkrStore();
   const { updateCard } = useBoardStore();
   const [zoom, setZoom] = useState<ZoomLevel>('week');
+  const [visibility, setVisibility] = useState<Visibility>({ card: true, objective: true, event: true });
+
+  useEffect(() => {
+    fetchEvents(currentDate);
+  }, [fetchEvents, currentDate]);
 
   const [dragging, setDragging] = useState<{
     id: string;
-    type: 'card' | 'objective';
+    type: GanttType;
     startX: number;
     originalStart: Date;
     originalEnd: Date;
@@ -77,33 +94,59 @@ export default function GanttChart({ objectives = [] }: Props) {
   }, [lists, activeBoardId]);
 
   const items: GanttItem[] = useMemo(() => {
-    const cardItems: GanttItem[] = cards.map((c) => ({
-      id: c.id,
-      type: 'card',
-      title: c.title,
-      startDate: c.startDate!,
-      endDate: c.dueDate!,
-      meta: {
-        priority: c.priority,
-        assignees: c.assignees,
-        status: c.status,
-        progress: c.progress,
-      },
-    }));
+    const result: GanttItem[] = [];
 
-    const objectiveItems: GanttItem[] = objectives.map((o) => ({
-      id: o.id,
-      type: 'objective',
-      title: o.title,
-      startDate: o.startDate,
-      endDate: o.endDate,
-      meta: {},
-    }));
+    if (visibility.objective) {
+      const objectiveItems: GanttItem[] = objectives.map((o) => ({
+        id: o.id,
+        type: 'objective',
+        title: o.title,
+        startDate: o.startDate,
+        endDate: o.endDate,
+        meta: {},
+      }));
+      result.push(...objectiveItems);
+    }
 
-    return [...objectiveItems, ...cardItems].sort((a, b) => {
+    if (visibility.card) {
+      const cardItems: GanttItem[] = cards.map((c) => ({
+        id: c.id,
+        type: 'card',
+        title: c.title,
+        startDate: c.startDate!,
+        endDate: c.dueDate!,
+        meta: {
+          priority: c.priority,
+          assignees: c.assignees,
+          status: c.status,
+          progress: c.progress,
+        },
+      }));
+      result.push(...cardItems);
+    }
+
+    if (visibility.event) {
+      const eventItems: GanttItem[] = events
+        .filter((e: CalendarEvent) => e.startDate && e.endDate)
+        .map((e: CalendarEvent) => ({
+          id: e.id,
+          type: 'event',
+          title: e.title,
+          startDate: e.startDate,
+          endDate: e.endDate!,
+          meta: {
+            color: e.color,
+            user: e.user,
+            allDay: e.allDay,
+          },
+        }));
+      result.push(...eventItems);
+    }
+
+    return result.sort((a, b) => {
       return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
     });
-  }, [cards, objectives]);
+  }, [cards, objectives, events, visibility]);
 
   const { rangeStart, totalDays, dayWidth } = useMemo(() => {
     if (items.length === 0) {
@@ -200,6 +243,11 @@ export default function GanttChart({ objectives = [] }: Props) {
           startDate: newStart.toISOString(),
           endDate: newEnd.toISOString(),
         });
+      } else if (dragging.type === 'event') {
+        updateEvent(dragging.id, {
+          startDate: newStart.toISOString(),
+          endDate: newEnd.toISOString(),
+        });
       } else {
         updateCard(dragging.id, {
           startDate: newStart.toISOString(),
@@ -209,18 +257,22 @@ export default function GanttChart({ objectives = [] }: Props) {
     }
     setDragging(null);
     setDragOffset(0);
-  }, [dragging, dragOffset, updateObjective, updateCard]);
+  }, [dragging, dragOffset, updateObjective, updateCard, updateEvent]);
 
-  if (items.length === 0) {
+  const allEmpty = !visibility.card && !visibility.objective && !visibility.event;
+
+  if (allEmpty || items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center gap-3">
         <div className="h-12 w-12 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center">
           <span className="text-2xl">📊</span>
         </div>
         <p className="text-[var(--text-tertiary)] text-sm">
-          No tasks or objectives with dates found.
+          {allEmpty
+            ? 'Select at least one item type to display on the Gantt chart.'
+            : 'No tasks, objectives, or events with dates found for the selected view.'}
           <br />
-          Add dates to your tasks and objectives to see them on the Gantt chart.
+          Add dates to your tasks, objectives, and events to see them here.
         </p>
       </div>
     );
@@ -228,22 +280,48 @@ export default function GanttChart({ objectives = [] }: Props) {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Zoom controls */}
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs text-[var(--text-tertiary)] mr-1">Zoom:</span>
-        {(['day', 'week', 'month'] as ZoomLevel[]).map((z) => (
-          <button
-            key={z}
-            onClick={() => setZoom(z)}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors
-              ${zoom === z
-                ? 'bg-[var(--accent)] text-[var(--text-primary)]'
-                : 'bg-[var(--bg-elevated)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)]'
-              }`}
-          >
-            {z.charAt(0).toUpperCase() + z.slice(1)}
-          </button>
-        ))}
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-[var(--text-tertiary)] mr-1">Show:</span>
+          {(Object.keys(visibility) as Array<keyof Visibility>).map((key) => {
+            const meta = TYPE_META[key];
+            const Icon = meta.icon;
+            const active = visibility[key];
+            return (
+              <button
+                key={key}
+                onClick={() => setVisibility((v) => ({ ...v, [key]: !v[key] }))}
+                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors border
+                  ${active
+                    ? 'bg-[var(--accent)] text-[var(--text-primary)] border-transparent'
+                    : 'bg-[var(--bg-elevated)] text-[var(--text-tertiary)] border-[var(--border)] hover:text-[var(--text-secondary)]'
+                  }`}
+                title={meta.label}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {meta.label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="w-px h-4 bg-[var(--border)] mx-1 hidden sm:block" />
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-[var(--text-tertiary)] mr-1">Zoom:</span>
+          {(['day', 'week', 'month'] as ZoomLevel[]).map((z) => (
+            <button
+              key={z}
+              onClick={() => setZoom(z)}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors
+                ${zoom === z
+                  ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+                  : 'bg-[var(--bg-elevated)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border)]'
+                }`}
+            >
+              {z.charAt(0).toUpperCase() + z.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Desktop Gantt chart */}
@@ -251,32 +329,43 @@ export default function GanttChart({ objectives = [] }: Props) {
         {/* Left panel: task list */}
         <div className="w-56 shrink-0 bg-[var(--bg-elevated)] border-r border-[var(--border)] flex flex-col">
           <div className="h-8 border-b border-[var(--border)] flex items-center px-3">
-            <span className="text-xs font-medium text-[var(--text-tertiary)]">Task / Objective</span>
+            <span className="text-xs font-medium text-[var(--text-tertiary)]">Task / Objective / Event</span>
           </div>
           <div className="flex-1 overflow-y-auto">
             {items.map((item) => {
-              const colors = item.type === 'card' ? PRIORITY_COLORS[item.meta.priority || 'low'] || PRIORITY_COLORS.low : null;
+              const isCard = item.type === 'card';
+              const isEvent = item.type === 'event';
+              const isObjective = item.type === 'objective';
+              const colors = isCard
+                ? PRIORITY_COLORS[item.meta.priority || 'low'] || PRIORITY_COLORS.low
+                : null;
+              const TypeIcon = TYPE_META[item.type].icon;
+              const iconColor = isEvent
+                ? item.meta.color || TYPE_META.event.fallback
+                : isObjective
+                  ? TYPE_META.objective.fallback
+                  : colors?.dot || TYPE_META.card.fallback;
+
               return (
                 <div
                   key={item.id}
                   className="h-10 flex items-center px-3 border-b border-[var(--border)] hover:bg-[var(--bg-base)] transition-colors"
                 >
-                  {item.type === 'objective' ? (
-                    <Target className="h-3.5 w-3.5 mr-2 shrink-0 text-[var(--accent)]" />
-                  ) : (
-                    <div
-                      className="w-1.5 h-1.5 rounded-full mr-2 shrink-0"
-                      style={{ backgroundColor: colors?.dot }}
-                    />
-                  )}
+                  <TypeIcon
+                    className="h-3.5 w-3.5 mr-2 shrink-0"
+                    style={{ color: iconColor }}
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs text-[var(--text-secondary)] truncate">{item.title}</p>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      {item.type === 'card' && item.meta.assignees && item.meta.assignees.length > 0 && (
+                      {isCard && item.meta.assignees && item.meta.assignees.length > 0 && (
                         <span className="text-[10px] text-[var(--text-tertiary)]">{item.meta.assignees.map((a: { user: { name: string } }) => a.user.name).join(', ')}</span>
                       )}
-                      {item.type === 'card' && item.meta.status && (
+                      {isCard && item.meta.status && (
                         <span className="text-[10px] text-[var(--text-tertiary)]">{item.meta.status}</span>
+                      )}
+                      {isEvent && item.meta.user && (
+                        <span className="text-[10px] text-[var(--text-tertiary)]">{item.meta.user.name}</span>
                       )}
                     </div>
                   </div>
@@ -378,9 +467,20 @@ export default function GanttChart({ objectives = [] }: Props) {
                 const visualLeft = left + (isDragging ? dragOffset : 0);
 
                 const isObjective = item.type === 'objective';
-                const colors = isObjective
-                  ? { bg: 'bg-purple-500/20', bar: 'bg-purple-500' }
-                  : PRIORITY_COLORS[item.meta.priority || 'low'] || PRIORITY_COLORS.low;
+                const isEvent = item.type === 'event';
+
+                let colors;
+                if (isObjective) {
+                  colors = { bg: 'bg-purple-500/20', bar: 'bg-purple-500' };
+                } else if (isEvent) {
+                  const eventColor = item.meta.color || '#10b981';
+                  colors = {
+                    bg: `bg-[${eventColor}]/20`,
+                    bar: `bg-[${eventColor}]`,
+                  };
+                } else {
+                  colors = PRIORITY_COLORS[item.meta.priority || 'low'] || PRIORITY_COLORS.low;
+                }
 
                 return (
                   <div
@@ -395,7 +495,7 @@ export default function GanttChart({ objectives = [] }: Props) {
                         left: visualLeft,
                         width: Math.max(width, dayWidth),
                       }}
-                      title={`${item.title}: ${format(start, 'MMM d')} – ${format(end, 'MMM d')}${isObjective ? ' (OKR)' : ''}`}
+                      title={`${item.title}: ${format(start, 'MMM d')} – ${format(end, 'MMM d')}${isObjective ? ' (OKR)' : isEvent ? ' (Event)' : ''}`}
                     >
                       {!isObjective && item.meta.progress !== undefined && (
                         <div
@@ -406,6 +506,7 @@ export default function GanttChart({ objectives = [] }: Props) {
                       {width > 60 && (
                         <span className="relative z-10 text-[11px] text-[var(--text-primary)] font-medium truncate px-2 flex items-center gap-1">
                           {isObjective && <Briefcase className="h-3 w-3" />}
+                          {isEvent && <Calendar className="h-3 w-3" />}
                           {item.title}
                         </span>
                       )}
@@ -421,26 +522,39 @@ export default function GanttChart({ objectives = [] }: Props) {
       {/* Mobile list view */}
       <div className="sm:hidden flex-1 overflow-y-auto space-y-2">
         {items.map((item) => {
+          const isCard = item.type === 'card';
+          const isEvent = item.type === 'event';
           const isObjective = item.type === 'objective';
-          const colors = isObjective
-            ? { dot: '#a855f7', bg: 'bg-purple-500/20', bar: 'bg-purple-500' }
-            : PRIORITY_COLORS[item.meta.priority || 'low'] || PRIORITY_COLORS.low;
+          const TypeIcon = TYPE_META[item.type].icon;
+          let colors;
+          if (isObjective) {
+            colors = { dot: '#a855f7', bg: 'bg-purple-500/20', bar: 'bg-purple-500' };
+          } else if (isEvent) {
+            colors = {
+              dot: item.meta.color || '#10b981',
+              bg: 'bg-[var(--accent)]/20',
+              bar: 'bg-[var(--accent)]',
+            };
+          } else {
+            colors = PRIORITY_COLORS[item.meta.priority || 'low'] || PRIORITY_COLORS.low;
+          }
           return (
             <div key={item.id} className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg p-3">
               <div className="flex items-center gap-2 mb-1.5">
-                <div
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: colors.dot }}
+                <TypeIcon
+                  className="h-4 w-4 shrink-0"
+                  style={{ color: colors.dot }}
                 />
                 <span className="text-sm text-[var(--text-secondary)] truncate">{item.title}</span>
                 {isObjective && <span className="text-[10px] text-purple-400 font-medium">OKR</span>}
+                {isEvent && <span className="text-[10px] text-emerald-400 font-medium">Event</span>}
               </div>
               {item.startDate && item.endDate && (
                 <p className="text-xs text-[var(--text-tertiary)]">
                   {format(new Date(item.startDate), 'MMM d')} – {format(new Date(item.endDate), 'MMM d')}
                 </p>
               )}
-              {!isObjective && item.meta.progress !== undefined && item.meta.progress > 0 && (
+              {isCard && item.meta.progress !== undefined && item.meta.progress > 0 && (
                 <div className="mt-2 h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
                   <div
                     className="h-full rounded-full bg-[var(--accent)] transition-all"
