@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useOkrStore } from '@/features/okrs/okrStore';
 import { pct, formatValue } from '@/features/okrs/progress';
 import { Trash2, Pencil, Check, X, ChevronUp, ChevronDown } from 'lucide-react';
+import StatusBadge from '@/components/board/StatusBadge';
+import type { LinkedTask } from '@/lib/api/okrs';
 
 interface Kr {
   id: string;
@@ -12,6 +14,14 @@ interface Kr {
   current: number;
   unit: string | null;
   position: number;
+  startDate: string;
+  endDate: string;
+  cards?: LinkedTask[];
+}
+
+function formatDateRange(start: string, end: string) {
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+  return `${new Date(start).toLocaleDateString('en-US', opts)} – ${new Date(end).toLocaleDateString('en-US', opts)}`;
 }
 
 interface Props {
@@ -28,6 +38,8 @@ export default function KeyResultRow({ objectiveId, kr, index, total }: Props) {
   const [editTitle, setEditTitle] = useState(kr.title);
   const [editTarget, setEditTarget] = useState(String(kr.target));
   const [editUnit, setEditUnit] = useState(kr.unit ?? '');
+  const [editStartDate, setEditStartDate] = useState(kr.startDate.slice(0, 10));
+  const [editEndDate, setEditEndDate] = useState(kr.endDate.slice(0, 10));
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -72,12 +84,18 @@ export default function KeyResultRow({ objectiveId, kr, index, total }: Props) {
       setError('Target must be a positive number.');
       return;
     }
+    if (!editStartDate || !editEndDate) {
+      setError('Start and end dates are required.');
+      return;
+    }
     setError(null);
     try {
       await updateKeyResult(objectiveId, kr.id, {
         title,
         target,
         unit: editUnit.trim(),
+        startDate: editStartDate,
+        endDate: editEndDate,
       });
       setIsEditing(false);
     } catch (e) {
@@ -89,6 +107,8 @@ export default function KeyResultRow({ objectiveId, kr, index, total }: Props) {
     setEditTitle(kr.title);
     setEditTarget(String(kr.target));
     setEditUnit(kr.unit ?? '');
+    setEditStartDate(kr.startDate.slice(0, 10));
+    setEditEndDate(kr.endDate.slice(0, 10));
     setIsEditing(false);
     setError(null);
   };
@@ -116,6 +136,21 @@ export default function KeyResultRow({ objectiveId, kr, index, total }: Props) {
             maxLength={200}
             className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
           />
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={editStartDate}
+              onChange={(e) => setEditStartDate(e.target.value)}
+              className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+            />
+            <span className="text-xs text-[var(--text-tertiary)]">to</span>
+            <input
+              type="date"
+              value={editEndDate}
+              onChange={(e) => setEditEndDate(e.target.value)}
+              className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+            />
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="number"
@@ -176,7 +211,12 @@ export default function KeyResultRow({ objectiveId, kr, index, total }: Props) {
               <ChevronDown className="h-3 w-3" />
             </button>
           </div>
-          <p className="text-sm text-[var(--text-primary)] truncate">{kr.title}</p>
+          <div className="min-w-0">
+            <p className="text-sm text-[var(--text-primary)] truncate">{kr.title}</p>
+            <div className="text-xs text-[var(--text-tertiary)]">
+              {formatDateRange(kr.startDate, kr.endDate)}
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs text-[var(--text-tertiary)] font-mono">
@@ -225,6 +265,20 @@ export default function KeyResultRow({ objectiveId, kr, index, total }: Props) {
         </div>
         <span className="text-xs text-[var(--text-tertiary)] w-10 text-right tabular-nums">{Math.round(progress)}%</span>
       </div>
+      {kr.cards && kr.cards.length > 0 && (
+        <div className="mt-3 space-y-1.5">
+          {kr.cards.map((task) => (
+            <a
+              key={task.id}
+              href={`/board/${task.boardId}?card=${task.id}`}
+              className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-sm"
+            >
+              <span className="truncate text-[var(--text-primary)]">{task.title}</span>
+              <StatusBadge status={task.status} />
+            </a>
+          ))}
+        </div>
+      )}
       {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
     </div>
   );
