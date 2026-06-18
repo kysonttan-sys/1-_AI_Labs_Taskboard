@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Settings, Users, Trash2, Plus, Calendar, Unlink } from 'lucide-react';
+import { Settings, Users, Trash2, Plus, Calendar, Unlink, Shield, User } from 'lucide-react';
 import { getInitials } from '@/lib/utils/initials';
 
 interface User {
@@ -37,6 +37,19 @@ export default function SettingsPage() {
     });
     setNewMemberName('');
     setNewMemberPin('');
+    loadUsers();
+  }
+
+  async function updateRole(id: string, role: string) {
+    const res = await fetch('/api/team', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: id, role }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || 'Failed to update role');
+    }
     loadUsers();
   }
 
@@ -139,14 +152,37 @@ export default function SettingsPage() {
                 <p className="text-sm text-[var(--text-primary)] truncate">{user.name}</p>
                 <p className="text-xs text-[var(--text-tertiary)]">{user.role}</p>
               </div>
-              {user.role !== 'admin' && (
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <select
+                    value={user.role}
+                    onChange={(e) => updateRole(user.id, e.target.value)}
+                    className="appearance-none pl-7 pr-7 py-1.5 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-xs text-[var(--text-primary)] focus-ring cursor-pointer"
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <div className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                    {user.role === 'admin' ? (
+                      <Shield className="h-3.5 w-3.5 text-[var(--accent)]" />
+                    ) : (
+                      <User className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+                    )}
+                  </div>
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg className="h-3 w-3 text-[var(--text-tertiary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
                 <button
                   onClick={() => removeMember(user.id)}
                   className="p-1.5 text-[var(--text-tertiary)] hover:text-red-400 transition-colors rounded"
+                  title="Remove member"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-              )}
+              </div>
             </div>
           ))}
         </div>

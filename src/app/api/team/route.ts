@@ -19,6 +19,35 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ id: user.id, name: user.name, color: user.color, role: user.role });
 }
 
+export async function PATCH(request: NextRequest) {
+  const { session, response } = await requireAdmin();
+  if (!session) return response;
+
+  const { userId, role } = await request.json();
+  if (!userId) return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+  if (!['admin', 'member'].includes(role)) {
+    return NextResponse.json({ error: 'role must be admin or member' }, { status: 400 });
+  }
+
+  // Prevent self-demotion if there would be no admin left
+  if (session.userId === userId && role !== 'admin') {
+    const adminCount = await prisma.user.count({ where: { role: 'admin' } });
+    if (adminCount <= 1) {
+      return NextResponse.json(
+        { error: 'At least one admin is required. Promote another admin first.' },
+        { status: 400 }
+      );
+    }
+  }
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { role },
+    select: { id: true, name: true, color: true, role: true },
+  });
+  return NextResponse.json(user);
+}
+
 export async function DELETE(request: NextRequest) {
   const { session, response } = await requireAdmin();
   if (!session) return response;
