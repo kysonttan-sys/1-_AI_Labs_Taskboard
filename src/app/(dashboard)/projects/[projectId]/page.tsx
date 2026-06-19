@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { pct } from '@/features/okrs/progress';
 import ObjectiveCard from '@/app/(dashboard)/okrs/ObjectiveCard';
+import GanttChart from '@/components/calendar/GanttChart';
 
 type TabKey = 'overview' | 'okrs' | 'boards' | 'gantt';
 
@@ -149,13 +150,7 @@ export default function ProjectDetailPage() {
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => {
-              if (tab.key === 'gantt') {
-                router.push(`/projects/${projectId}/gantt`);
-              } else {
-                setActiveTab(tab.key);
-              }
-            }}
+            onClick={() => setActiveTab(tab.key)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-t-md text-sm font-medium transition-colors border-b-2 -mb-[1px]
               ${activeTab === tab.key
                 ? 'bg-[var(--accent-muted)] text-[var(--accent)] border-[var(--accent)]'
@@ -367,11 +362,13 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      {/* Gantt tab - just a placeholder redirect, actual page is separate */}
+      {/* Gantt tab */}
       {activeTab === 'gantt' && (
-        <div className="flex flex-col items-center justify-center h-64 text-center gap-3">
-          <BarChart3 className="h-10 w-10 text-[var(--text-tertiary)]" />
-          <p className="text-sm text-[var(--text-tertiary)]">Gantt view is loading...</p>
+        <div className="flex flex-col h-full min-h-0">
+          <GanttChart
+            objectives={projectObjectives}
+            boardIds={projectBoards.map((b) => b.id)}
+          />
         </div>
       )}
     </div>

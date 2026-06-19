@@ -16,7 +16,7 @@ import {
   LayoutGrid,
   BarChart3,
   Home,
-  Calendar,
+  CalendarDays,
   Newspaper,
   ChevronDown,
   ChevronRight as ChevronRightIcon,
@@ -417,8 +417,8 @@ export default function Sidebar() {
               }
             `}
           >
-            <Calendar className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Calendar</span>}
+            <CalendarDays className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Timeline</span>}
           </button>
           <button
             onClick={() => router.push('/digest')}
