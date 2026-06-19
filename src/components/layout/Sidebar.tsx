@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, usePathname } from 'next/navigation';
 import {
   Plus,
   LogOut,
@@ -13,6 +13,13 @@ import {
   Moon,
   Target,
   FolderKanban,
+  LayoutGrid,
+  BarChart3,
+  Home,
+  Calendar,
+  Newspaper,
+  ChevronDown,
+  ChevronRight as ChevronRightIcon,
 } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/authStore';
 import { useBoardStore } from '@/features/board/boardStore';
@@ -23,8 +30,9 @@ import { toggleTheme } from '@/lib/utils/theme';
 export default function Sidebar() {
   const router = useRouter();
   const params = useParams();
+  const pathname = usePathname();
   const { user, logout } = useAuthStore();
-  const { boards, fetchBoards, createBoard, setActiveBoard, reorderBoards, activeBoardId: storedActiveBoardId } = useBoardStore();
+  const { boards, fetchBoards, reorderBoards, setActiveBoard, activeBoardId: storedActiveBoardId } = useBoardStore();
   const { projects, fetchProjects } = useProjectStore();
   const [collapsed, setCollapsed] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
   const [isCreating, setIsCreating] = useState(false);
@@ -33,6 +41,8 @@ export default function Sidebar() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const dragItemRef = useRef<number | null>(null);
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('dark');
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [expandedBoards, setExpandedBoards] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const theme = document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null;
@@ -49,24 +59,53 @@ export default function Sidebar() {
     fetchProjects();
   }, [fetchBoards, fetchProjects]);
 
-  const activeBoardId = (params?.boardId as string | undefined) || storedActiveBoardId;
+  // Auto-expand the project whose page we are on, and the boards section
+  // if we are on a board in that project.
+  useEffect(() => {
+    const projectId = params?.projectId as string | undefined;
+    const boardId = (params?.boardId as string | undefined) || storedActiveBoardId;
+    if (!projects.length) return;
 
-  async function handleCreateBoard() {
-    if (!newBoardName.trim()) return;
-    const defaultProjectId = projects[0]?.id;
-    if (!defaultProjectId) {
-      alert('Create a project first before adding boards.');
-      return;
+    const nextExpandedProjects = new Set(expandedProjects);
+    const nextExpandedBoards = new Set(expandedBoards);
+
+    if (projectId) {
+      nextExpandedProjects.add(projectId);
+      const board = boards.find((b) => b.id === boardId);
+      if (board?.projectId === projectId) {
+        nextExpandedBoards.add(projectId);
+      }
+    } else if (boardId) {
+      const board = boards.find((b) => b.id === boardId);
+      if (board?.projectId) {
+        nextExpandedProjects.add(board.projectId);
+        nextExpandedBoards.add(board.projectId);
+      }
     }
-    const board = await createBoard(newBoardName.trim(), '📋', defaultProjectId);
-    setNewBoardName('');
-    setIsCreating(false);
-    router.push(`/board/${board.id}`);
-  }
+
+    setExpandedProjects(nextExpandedProjects);
+    setExpandedBoards(nextExpandedBoards);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params?.projectId, params?.boardId, storedActiveBoardId, projects.length, boards.length]);
+
+  const activeBoardId = (params?.boardId as string | undefined) || storedActiveBoardId;
+  const boardsByProject = projects.map((project) => ({
+    project,
+    boards: boards.filter((b) => b.projectId === project.id),
+  }));
 
   async function handleLogout() {
     await logout();
     router.push('/login');
+  }
+
+  async function handleCreateBoard(projectId: string) {
+    if (!newBoardName.trim()) return;
+    const board = await useBoardStore.getState().createBoard(newBoardName.trim(), '📋', projectId);
+    setNewBoardName('');
+    setIsCreating(false);
+    setActiveBoard(board.id);
+    router.push(`/board/${board.id}`);
   }
 
   function handleDragStart(index: number) {
@@ -89,6 +128,32 @@ export default function Sidebar() {
     setDragIndex(null);
     setDragOverIndex(null);
     dragItemRef.current = null;
+  }
+
+  function toggleProject(projectId: string) {
+    setExpandedProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  }
+
+  function toggleBoards(projectId: string) {
+    setExpandedBoards((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  }
+
+  function isActive(href: string) {
+    return pathname === href;
+  }
+
+  function isActiveProject(projectId: string) {
+    return pathname.startsWith(`/projects/${projectId}`);
   }
 
   return (
@@ -133,114 +198,249 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {/* Board list */}
+        {/* Project tree */}
         <div className="flex-1 overflow-y-auto py-3 px-2 scrollbar-thin">
           {!collapsed && (
             <p className="px-2 mb-2 text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
-              Boards
+              Projects
             </p>
           )}
 
-          {boards.map((board, index) => {
-            const isActive = activeBoardId === board.id;
-            const isDragTarget = dragOverIndex === index && dragItemRef.current !== index;
-            const isDragging = dragIndex === index;
+          {boardsByProject.map(({ project, boards: projectBoards }) => {
+            const projectExpanded = expandedProjects.has(project.id);
+            const boardsExpanded = expandedBoards.has(project.id);
+            const projectActive = isActiveProject(project.id);
 
             return (
-              <div
-                key={board.id}
-                draggable={!collapsed}
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDragEnd={handleDragEnd}
-                onDragLeave={() => setDragOverIndex(null)}
-                className={`
-                  group w-full flex items-center gap-1 px-1 py-1 rounded-md text-sm transition-all mb-0.5
-                  ${isDragging ? 'opacity-50 scale-95' : ''}
-                  ${isDragTarget ? 'border-t-2 border-t-[var(--accent)]' : ''}
-                  ${isActive
-                    ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
-                    : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]'
-                  }
-                `}
-                onClick={() => {
-                  setActiveBoard(board.id);
-                  router.push(`/board/${board.id}`);
-                }}
-                style={{ cursor: 'grab' }}
-              >
+              <div key={project.id} className="mb-1">
+                {/* Project row */}
                 <div
-                  className={`p-0.5 rounded hover:bg-[var(--bg-surface)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ${collapsed ? 'hidden' : ''}`}
-                  onMouseDown={(e) => e.stopPropagation()}
+                  className={`
+                    group flex items-center gap-1 px-1 py-1.5 rounded-md text-sm transition-all cursor-pointer
+                    ${projectActive || projectExpanded
+                      ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+                      : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]'
+                    }
+                  `}
                 >
-                  <GripVertical className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+                  {!collapsed && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleProject(project.id); }}
+                      className="p-0.5 rounded hover:bg-[var(--bg-surface)] shrink-0"
+                    >
+                      {projectExpanded ? (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronRightIcon className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  )}
+                  <div
+                    className="flex-1 flex items-center gap-2 min-w-0"
+                    onClick={() => router.push(`/projects/${project.id}`)}
+                  >
+                    <FolderKanban className="h-4 w-4 shrink-0" />
+                    {!collapsed && <span className="truncate">{project.name}</span>}
+                  </div>
                 </div>
-                <span className="text-base shrink-0">{board.icon}</span>
-                {!collapsed && (
-                  <span className="truncate">{board.name}</span>
+
+                {/* Expanded project children */}
+                {!collapsed && projectExpanded && (
+                  <div className="ml-2 pl-3 border-l border-[var(--border)] space-y-0.5 mt-0.5">
+                    {/* Overview */}
+                    <button
+                      onClick={() => router.push(`/projects/${project.id}`)}
+                      className={`
+                        w-full flex items-center gap-2 px-2 py-1 rounded-md text-sm transition-colors
+                        ${isActive(`/projects/${project.id}`)
+                          ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+                          : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]'
+                        }
+                      `}
+                    >
+                      <Home className="h-3.5 w-3.5 shrink-0" />
+                      <span>Overview</span>
+                    </button>
+
+                    {/* OKRs */}
+                    <button
+                      onClick={() => router.push(`/projects/${project.id}/okrs`)}
+                      className={`
+                        w-full flex items-center gap-2 px-2 py-1 rounded-md text-sm transition-colors
+                        ${isActive(`/projects/${project.id}/okrs`)
+                          ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+                          : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]'
+                        }
+                      `}
+                    >
+                      <Target className="h-3.5 w-3.5 shrink-0" />
+                      <span>OKRs</span>
+                    </button>
+
+                    {/* Boards sub-section */}
+                    <div>
+                      <button
+                        onClick={() => toggleBoards(project.id)}
+                        className={`
+                          w-full flex items-center gap-1 px-2 py-1 rounded-md text-sm transition-colors
+                          ${boardsExpanded
+                            ? 'text-[var(--text-secondary)]'
+                            : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                          }
+                        `}
+                      >
+                        {boardsExpanded ? (
+                          <ChevronDown className="h-3 w-3 shrink-0" />
+                        ) : (
+                          <ChevronRightIcon className="h-3 w-3 shrink-0" />
+                        )}
+                        <LayoutGrid className="h-3.5 w-3.5 shrink-0 ml-0.5" />
+                        <span>Boards</span>
+                      </button>
+
+                      {boardsExpanded && (
+                        <div className="ml-2 pl-2 border-l border-[var(--border)] mt-0.5 space-y-0.5">
+                          {projectBoards.map((board, index) => {
+                            const isActiveBoard = activeBoardId === board.id;
+                            const isDragTarget = dragOverIndex === index && dragItemRef.current !== index;
+                            const isDragging = dragIndex === index;
+
+                            return (
+                              <div
+                                key={board.id}
+                                draggable
+                                onDragStart={() => handleDragStart(index)}
+                                onDragOver={(e) => handleDragOver(e, index)}
+                                onDragEnd={handleDragEnd}
+                                onDragLeave={() => setDragOverIndex(null)}
+                                className={`
+                                  group flex items-center gap-1 px-1 py-1 rounded-md text-sm transition-all cursor-pointer
+                                  ${isDragging ? 'opacity-50 scale-95' : ''}
+                                  ${isDragTarget ? 'border-t-2 border-t-[var(--accent)]' : ''}
+                                  ${isActiveBoard
+                                    ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+                                    : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]'
+                                  }
+                                `}
+                                onClick={() => {
+                                  setActiveBoard(board.id);
+                                  router.push(`/board/${board.id}`);
+                                }}
+                                style={{ cursor: 'grab' }}
+                              >
+                                <div
+                                  className="p-0.5 rounded hover:bg-[var(--bg-surface)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                >
+                                  <GripVertical className="h-3 w-3 text-[var(--text-tertiary)]" />
+                                </div>
+                                <span className="text-base shrink-0">{board.icon}</span>
+                                <span className="truncate">{board.name}</span>
+                              </div>
+                            );
+                          })}
+
+                          {/* New board */}
+                          {isCreating ? (
+                            <form
+                              onSubmit={(e) => { e.preventDefault(); handleCreateBoard(project.id); }}
+                              className="px-1"
+                            >
+                              <input
+                                autoFocus
+                                value={newBoardName}
+                                onChange={(e) => setNewBoardName(e.target.value)}
+                                placeholder="Board name..."
+                                className="w-full px-2 py-1 text-xs bg-[var(--bg-surface)] border border-[var(--border)]
+                                  rounded-md text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring"
+                                onBlur={() => {
+                                  if (!newBoardName.trim()) setIsCreating(false);
+                                }}
+                              />
+                            </form>
+                          ) : (
+                            <button
+                              onClick={() => setIsCreating(true)}
+                              className="w-full flex items-center gap-1.5 px-2 py-1 rounded-md text-xs
+                                text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors"
+                            >
+                              <Plus className="h-3 w-3 shrink-0" />
+                              <span>New board</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Gantt */}
+                    <button
+                      onClick={() => router.push(`/projects/${project.id}/gantt`)}
+                      className={`
+                        w-full flex items-center gap-2 px-2 py-1 rounded-md text-sm transition-colors
+                        ${isActive(`/projects/${project.id}/gantt`)
+                          ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+                          : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]'
+                        }
+                      `}
+                    >
+                      <BarChart3 className="h-3.5 w-3.5 shrink-0" />
+                      <span>Gantt</span>
+                    </button>
+                  </div>
                 )}
               </div>
             );
           })}
 
-          {/* New board */}
+          {/* New Project button */}
           {!collapsed && (
-            <div className="mt-2">
-              {isCreating ? (
-                <form onSubmit={handleCreateBoard} className="px-1">
-                  <input
-                    autoFocus
-                    value={newBoardName}
-                    onChange={(e) => setNewBoardName(e.target.value)}
-                    placeholder="Board name..."
-                    className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)]
-                      rounded-md text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-ring"
-                    onBlur={() => {
-                      if (!newBoardName.trim()) setIsCreating(false);
-                    }}
-                  />
-                </form>
-              ) : (
-                <button
-                  onClick={() => setIsCreating(true)}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm
-                    text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors"
-                >
-                  <Plus className="h-4 w-4 shrink-0" />
-                  <span>New Board</span>
-                </button>
-              )}
-            </div>
+            <button
+              onClick={() => router.push('/projects')}
+              className="w-full flex items-center gap-2 px-2 py-1.5 mt-2 rounded-md text-sm
+                text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors"
+            >
+              <Plus className="h-4 w-4 shrink-0" />
+              <span>New Project</span>
+            </button>
           )}
         </div>
 
-        {/* OKRs + Settings links */}
+        {/* Global links */}
         <div className="border-t border-[var(--border)] px-2 py-2 shrink-0">
           <button
-            onClick={() => router.push('/projects')}
+            onClick={() => router.push('/calendar')}
             className={`
               w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors
-              text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]
+              ${pathname === '/calendar'
+                ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+                : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]'
+              }
             `}
           >
-            <FolderKanban className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Projects</span>}
+            <Calendar className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Calendar</span>}
           </button>
           <button
-            onClick={() => router.push('/okrs')}
+            onClick={() => router.push('/digest')}
             className={`
               w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors
-              text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]
+              ${pathname === '/digest'
+                ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+                : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]'
+              }
             `}
           >
-            <Target className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>OKRs</span>}
+            <Newspaper className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Digest</span>}
           </button>
           <button
             onClick={() => router.push('/settings')}
             className={`
               w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors
-              text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]
+              ${pathname === '/settings'
+                ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+                : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]'
+              }
             `}
           >
             <Settings className="h-4 w-4 shrink-0" />
