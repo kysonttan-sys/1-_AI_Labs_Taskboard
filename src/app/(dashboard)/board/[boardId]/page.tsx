@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { useBoardStore } from '@/features/board/boardStore';
 import { useChatStore } from '@/features/chat/chatStore';
 import { useAuthStore } from '@/features/auth/authStore';
+import { AtSign } from 'lucide-react';
 import KanbanBoard from '@/components/board/KanbanBoard';
 import CardDetailModal from '@/components/board/CardDetailModal';
 import TeamChat from '@/components/chat/TeamChat';
@@ -17,7 +18,7 @@ export default function BoardPage() {
   const boardId = params.boardId as string;
   const cardParam = searchParams.get('card');
   const { lists, isLoading, fetchBoard, setActiveBoard, boards } = useBoardStore();
-  const { isOpen: chatOpen } = useChatStore();
+  const { isOpen: chatOpen, toggleOpen: toggleChat } = useChatStore();
   const { user } = useAuthStore();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(cardParam);
   const [filters, setFilters] = useState<BoardFiltersState>(makeEmptyFilters());
@@ -118,7 +119,8 @@ export default function BoardPage() {
           <KanbanBoard lists={filteredLists} onCardClick={(card) => setSelectedCardId(card.id)} />
         </div>
       </div>
-      <div className="flex items-start gap-2 shrink-0">
+      {/* Desktop chat side panel / trigger */}
+      <div className="hidden sm:flex items-start gap-2 shrink-0">
         {!chatOpen && (
           <TeamChat boardId={boardId} />
         )}
@@ -126,6 +128,18 @@ export default function BoardPage() {
       {chatOpen && (
         <TeamChat boardId={boardId} />
       )}
+
+      {/* Mobile floating chat button */}
+      {!chatOpen && (
+        <button
+          onClick={toggleChat}
+          className="sm:hidden fixed bottom-4 right-4 z-30 p-3 rounded-full bg-[var(--accent)] text-[var(--text-primary)] shadow-lg hover:bg-[var(--accent-hover)] transition-colors"
+          title="Team Chat"
+        >
+          <AtSign className="h-5 w-5" />
+        </button>
+      )}
+
       {selectedCard && (
         <CardDetailModal
           card={selectedCard}

@@ -215,14 +215,11 @@ export default function GanttChart({ objectives = [], boardIds }: Props) {
 
   const showDayLabels = zoom === 'day' || zoom === 'week';
 
-  const handleMouseDown = useCallback((e: React.MouseEvent, item: GanttItem) => {
-    e.preventDefault();
-    const container = containerRef.current;
-    if (!container) return;
+  const startDrag = useCallback((clientX: number, item: GanttItem) => {
     setDragging({
       id: item.id,
       type: item.type,
-      startX: e.clientX,
+      startX: clientX,
       originalStart: new Date(item.startDate),
       originalEnd: new Date(item.endDate),
       dayWidth,
@@ -230,13 +227,35 @@ export default function GanttChart({ objectives = [], boardIds }: Props) {
     setDragOffset(0);
   }, [dayWidth]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent, item: GanttItem) => {
+    e.preventDefault();
+    startDrag(e.clientX, item);
+  }, [startDrag]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent, item: GanttItem) => {
+    if (e.touches.length === 0) return;
+    // Prevent page scroll while dragging a bar
+    e.preventDefault();
+    startDrag(e.touches[0].clientX, item);
+  }, [startDrag]);
+
+  const moveDrag = useCallback((clientX: number) => {
     if (!dragging) return;
-    const deltaPixels = e.clientX - dragging.startX;
+    const deltaPixels = clientX - dragging.startX;
     setDragOffset(deltaPixels);
   }, [dragging]);
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    moveDrag(e.clientX);
+  }, [moveDrag]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 0) return;
+    e.preventDefault();
+    moveDrag(e.touches[0].clientX);
+  }, [moveDrag]);
+
+  const endDrag = useCallback(() => {
     if (!dragging) return;
     const deltaDays = Math.round(dragOffset / dragging.dayWidth);
     if (deltaDays !== 0) {
@@ -262,6 +281,14 @@ export default function GanttChart({ objectives = [], boardIds }: Props) {
     setDragging(null);
     setDragOffset(0);
   }, [dragging, dragOffset, updateObjective, updateCard, updateEvent]);
+
+  const handleMouseUp = useCallback(() => {
+    endDrag();
+  }, [endDrag]);
+
+  const handleTouchEnd = useCallback(() => {
+    endDrag();
+  }, [endDrag]);
 
   const allEmpty = !visibility.card && !visibility.objective && !visibility.event;
 
@@ -386,6 +413,8 @@ export default function GanttChart({ objectives = [], boardIds }: Props) {
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           {/* Date header */}
           <div className="h-8 shrink-0 overflow-hidden border-b border-[var(--border)] bg-[var(--bg-elevated)]">
@@ -492,10 +521,12 @@ export default function GanttChart({ objectives = [], boardIds }: Props) {
                   >
                     <div
                       onMouseDown={(e) => handleMouseDown(e, item)}
+                      onTouchStart={(e) => handleTouchStart(e, item)}
                       className={`absolute rounded h-6 flex items-center overflow-hidden group cursor-grab active:cursor-grabbing transition-opacity hover:opacity-90 ${isDragging ? 'opacity-80 z-20' : ''} ${!isEvent ? `${colors!.bg} ${colors!.bar}` : ''}`}
                       style={{
                         left: visualLeft,
                         width: Math.max(width, dayWidth),
+                        touchAction: 'none',
                         ...barStyle,
                       }}
                       title={`${item.title}: ${format(start, 'MMM d')} – ${format(end, 'MMM d')}${isObjective ? ' (OKR)' : isEvent ? ' (Event)' : ''}`}

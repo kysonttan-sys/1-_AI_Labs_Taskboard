@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Search, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Search, X, SlidersHorizontal } from 'lucide-react';
 import type { Card, List } from '@/types';
 
 export interface BoardFiltersState {
@@ -93,6 +93,7 @@ export function filterCards(cards: Card[], filters: BoardFiltersState): Card[] {
 }
 
 export default function BoardFilters({ lists, filters, onChange }: Props) {
+  const [mobileExpanded, setMobileExpanded] = useState(false);
   const allCards = useMemo(() => lists.flatMap((l) => l.cards), [lists]);
   const statusOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -177,9 +178,24 @@ export default function BoardFilters({ lists, filters, onChange }: Props) {
             Clear
           </button>
         )}
+
+        {/* Mobile filter toggle */}
+        <button
+          onClick={() => setMobileExpanded((v) => !v)}
+          className={`
+            sm:hidden flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-md transition-colors
+            ${mobileExpanded
+              ? 'bg-[var(--accent)] text-[var(--text-primary)]'
+              : 'bg-[var(--bg-surface)] text-[var(--text-tertiary)] border border-[var(--border)] hover:text-[var(--text-secondary)]'
+            }
+          `}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          {mobileExpanded ? 'Hide' : 'Filters'}
+        </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
+      <div className={`flex-wrap items-center gap-4 ${mobileExpanded ? 'flex' : 'hidden sm:flex'}`}>
         {assigneeOptions.length > 0 && (
           <div className="flex flex-col gap-1">
             <span className="text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">Assignees</span>
