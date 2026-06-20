@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useOkrStore } from '@/features/okrs/okrStore';
 import { pct, formatValue } from '@/features/okrs/progress';
 import { format, parseISO } from 'date-fns';
-import { Trash2, Pencil, Check, X, ChevronUp, ChevronDown, Plus, Calendar } from 'lucide-react';
+import { Trash2, Pencil, Check, X, ChevronUp, ChevronDown, ChevronRight, Plus, Calendar } from 'lucide-react';
+import { useCollapsedIds } from '@/lib/hooks/useCollapsedIds';
 import StatusBadge from '@/components/board/StatusBadge';
 import type { LinkedTask, CreateKeyResultTaskInput } from '@/lib/api/okrs';
 import KeyResultTaskPicker from './KeyResultTaskPicker';
@@ -41,6 +42,7 @@ interface Props {
 
 export default function KeyResultRow({ objectiveId, projectId, kr, index, total }: Props) {
   const { updateKeyResult, deleteKeyResult, reorderKeyResults, addKeyResultTask } = useOkrStore();
+  const { isCollapsed, toggle } = useCollapsedIds('okr-collapsed-key-results');
   const [currentText, setCurrentText] = useState(String(kr.current));
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(kr.title);
@@ -242,6 +244,18 @@ export default function KeyResultRow({ objectiveId, projectId, kr, index, total 
             {formatValue(kr.current, kr.target, kr.unit)}
           </span>
           <button
+            onClick={() => toggle(kr.id)}
+            className="p-1 rounded hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+            title={isCollapsed(kr.id) ? 'Expand key result' : 'Collapse key result'}
+            aria-expanded={!isCollapsed(kr.id)}
+          >
+            {isCollapsed(kr.id) ? (
+              <ChevronRight className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
+          </button>
+          <button
             onClick={() => setIsEditing(true)}
             className="p-1 rounded hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
             title="Edit key result"
@@ -284,65 +298,75 @@ export default function KeyResultRow({ objectiveId, projectId, kr, index, total 
         </div>
         <span className="text-xs text-[var(--text-tertiary)] w-10 text-right tabular-nums">{Math.round(progress)}%</span>
       </div>
-      {kr.cards && kr.cards.length > 0 && (
-        <div className="mt-3 space-y-1.5">
-          <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)] font-medium">Linked tasks</p>
-          {kr.cards.map((task) => (
-            <a
-              key={task.id}
-              href={`/board/${task.boardId}?card=${task.id}`}
-              className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-transparent hover:border-[var(--border)] transition-colors text-sm group"
-            >
-              <span className="truncate text-[var(--text-primary)]">{task.title}</span>
-              <div className="flex items-center gap-2.5 shrink-0">
-                {formatTaskDueDate(task.dueDate) && (
-                  <div className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]">
-                    <Calendar className="h-3 w-3" />
-                    <span>{formatTaskDueDate(task.dueDate)}</span>
-                  </div>
-                )}
-                {task.assignees && task.assignees.length > 0 && (
-                  <div className="flex items-center -space-x-1.5" title={task.assignees.map(({ user }) => user.name).join(', ')}>
-                    {task.assignees.slice(0, 3).map(({ user }) => {
-                      const initials = user.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .slice(0, 2)
-                        .join('')
-                        .toUpperCase();
-                      return (
-                        <span
-                          key={user.id}
-                          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-medium text-white ring-1 ring-[var(--bg-surface)]"
-                          style={{ backgroundColor: user.color || 'var(--accent)' }}
-                        >
-                          {initials}
-                        </span>
-                      );
-                    })}
-                    {task.assignees.length > 3 && (
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-medium text-[var(--text-secondary)] bg-[var(--bg-surface)] ring-1 ring-[var(--border)]">
-                        +{task.assignees.length - 3}
-                      </span>
+      {isCollapsed(kr.id) ? (
+        kr.cards && kr.cards.length > 0 && (
+          <div className="mt-2 text-xs text-[var(--text-tertiary)]">
+            {kr.cards.length} linked {kr.cards.length === 1 ? 'task' : 'tasks'}
+          </div>
+        )
+      ) : (
+        <>
+          {kr.cards && kr.cards.length > 0 && (
+            <div className="mt-3 space-y-1.5">
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)] font-medium">Linked tasks</p>
+              {kr.cards.map((task) => (
+                <a
+                  key={task.id}
+                  href={`/board/${task.boardId}?card=${task.id}`}
+                  className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-transparent hover:border-[var(--border)] transition-colors text-sm group"
+                >
+                  <span className="truncate text-[var(--text-primary)]">{task.title}</span>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    {formatTaskDueDate(task.dueDate) && (
+                      <div className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]">
+                        <Calendar className="h-3 w-3" />
+                        <span>{formatTaskDueDate(task.dueDate)}</span>
+                      </div>
                     )}
+                    {task.assignees && task.assignees.length > 0 && (
+                      <div className="flex items-center -space-x-1.5" title={task.assignees.map(({ user }) => user.name).join(', ')}>
+                        {task.assignees.slice(0, 3).map(({ user }) => {
+                          const initials = user.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .slice(0, 2)
+                            .join('')
+                            .toUpperCase();
+                          return (
+                            <span
+                              key={user.id}
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-medium text-white ring-1 ring-[var(--bg-surface)]"
+                              style={{ backgroundColor: user.color || 'var(--accent)' }}
+                            >
+                              {initials}
+                            </span>
+                          );
+                        })}
+                        {task.assignees.length > 3 && (
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-medium text-[var(--text-secondary)] bg-[var(--bg-surface)] ring-1 ring-[var(--border)]">
+                            +{task.assignees.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <span className="text-[10px] text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]">
+                      Open board →
+                    </span>
+                    <StatusBadge status={task.status} />
                   </div>
-                )}
-                <span className="text-[10px] text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]">
-                  Open board →
-                </span>
-                <StatusBadge status={task.status} />
-              </div>
-            </a>
-          ))}
-        </div>
+                </a>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => setPickerOpen(true)}
+            className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] transition-colors border border-dashed border-[var(--border)]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add task
+          </button>
+        </>
       )}
-      <button
-        onClick={() => setPickerOpen(true)}
-        className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] transition-colors border border-dashed border-[var(--border)]"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        Add task
-      </button>
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
       {pickerOpen && (
         <KeyResultTaskPicker

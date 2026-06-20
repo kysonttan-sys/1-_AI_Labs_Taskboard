@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useOkrStore } from '@/features/okrs/okrStore';
-import { Plus, Pencil, Trash2, Calendar } from 'lucide-react';
+import { Plus, Pencil, Trash2, Calendar, ChevronDown, ChevronRight } from 'lucide-react';
+import { useCollapsedIds } from '@/lib/hooks/useCollapsedIds';
 import KeyResultRow from './KeyResultRow';
 import ObjectiveCreateModal from './ObjectiveCreateModal';
 import type { Objective as ApiObjective } from '@/lib/api/okrs';
@@ -22,6 +23,7 @@ function formatDateRange(start: string, end: string) {
 
 export default function ObjectiveCard({ objective, projectId, overallPct }: Props) {
   const { addKeyResult, deleteObjective } = useOkrStore();
+  const { isCollapsed, toggle } = useCollapsedIds('okr-collapsed-objectives');
   const [editing, setEditing] = useState(false);
   const [addingKr, setAddingKr] = useState(false);
   const [newKrTitle, setNewKrTitle] = useState('');
@@ -29,6 +31,11 @@ export default function ObjectiveCard({ objective, projectId, overallPct }: Prop
   const [newKrUnit, setNewKrUnit] = useState('');
   const [newKrStartDate, setNewKrStartDate] = useState('');
   const [newKrEndDate, setNewKrEndDate] = useState('');
+
+  const linkedTaskCount = objective.keyResults.reduce(
+    (acc, kr) => acc + (kr.cards?.length ?? 0),
+    0
+  );
 
   const handleAddKr = async () => {
     if (!newKrTitle.trim()) return;
@@ -53,15 +60,29 @@ export default function ObjectiveCard({ objective, projectId, overallPct }: Prop
   return (
     <div className="card-base p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)] truncate">{objective.title}</h2>
-          <div className="flex items-center gap-1 text-xs text-[var(--text-tertiary)] mt-1">
-            <Calendar className="h-3 w-3" />
-            <span>{formatDateRange(objective.startDate, objective.endDate)}</span>
+        <div className="flex items-start gap-2 min-w-0">
+          <button
+            onClick={() => toggle(objective.id)}
+            className="mt-0.5 p-1 rounded hover:bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors shrink-0"
+            title={isCollapsed(objective.id) ? 'Expand objective' : 'Collapse objective'}
+            aria-expanded={!isCollapsed(objective.id)}
+          >
+            {isCollapsed(objective.id) ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </button>
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)] truncate">{objective.title}</h2>
+            <div className="flex items-center gap-1 text-xs text-[var(--text-tertiary)] mt-1">
+              <Calendar className="h-3 w-3" />
+              <span>{formatDateRange(objective.startDate, objective.endDate)}</span>
+            </div>
+            {objective.description && (
+              <p className="text-sm text-[var(--text-secondary)] mt-2">{objective.description}</p>
+            )}
           </div>
-          {objective.description && (
-            <p className="text-sm text-[var(--text-secondary)] mt-2">{objective.description}</p>
-          )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -85,92 +106,101 @@ export default function ObjectiveCard({ objective, projectId, overallPct }: Prop
         </div>
       </div>
 
-      <div className="mb-3">
-        <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-1">
-          <span>Overall progress</span>
-          <span className="tabular-nums">{Math.round(overallPct)}%</span>
-        </div>
-        <div className="h-2 bg-[var(--bg-surface)] rounded overflow-hidden">
-          <div className="h-full bg-[var(--accent)] transition-all" style={{ width: `${overallPct}%` }} />
-        </div>
-      </div>
-
-      <div>
-        {objective.keyResults.map((kr, i) => (
-          <KeyResultRow key={kr.id} objectiveId={objective.id} projectId={projectId} kr={kr} index={i} total={objective.keyResults.length} />
-        ))}
-      </div>
-
-      {addingKr ? (
-        <div className="mt-3 pt-3 border-t border-[var(--border)] flex flex-col gap-2">
-          <input
-            autoFocus
-            value={newKrTitle}
-            onChange={(e) => setNewKrTitle(e.target.value)}
-            placeholder="Key result title..."
-            className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
-          />
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={newKrStartDate}
-              onChange={(e) => setNewKrStartDate(e.target.value)}
-              className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
-            />
-            <span className="text-xs text-[var(--text-tertiary)]">to</span>
-            <input
-              type="date"
-              value={newKrEndDate}
-              onChange={(e) => setNewKrEndDate(e.target.value)}
-              className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              value={newKrTarget}
-              onChange={(e) => setNewKrTarget(e.target.value)}
-              placeholder="Target"
-              min="0"
-              step="any"
-              className="w-24 px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
-            />
-            <input
-              value={newKrUnit}
-              onChange={(e) => setNewKrUnit(e.target.value)}
-              placeholder="Unit (optional)"
-              maxLength={32}
-              className="flex-1 px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
-            />
-            <button
-              onClick={handleAddKr}
-              className="px-3 py-1.5 rounded bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-xs font-medium text-[var(--text-primary)]"
-            >
-              Add
-            </button>
-            <button
-              onClick={() => {
-                setAddingKr(false);
-                setNewKrTitle('');
-                setNewKrTarget('100');
-                setNewKrUnit('');
-                setNewKrStartDate('');
-                setNewKrEndDate('');
-              }}
-              className="px-3 py-1.5 rounded text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-            >
-              Cancel
-            </button>
-          </div>
+      {isCollapsed(objective.id) ? (
+        <div className="mt-2 text-xs text-[var(--text-tertiary)]">
+          {objective.keyResults.length} key {objective.keyResults.length === 1 ? 'result' : 'results'}
+          {linkedTaskCount > 0 && ` · ${linkedTaskCount} linked ${linkedTaskCount === 1 ? 'task' : 'tasks'}`}
         </div>
       ) : (
-        <button
-          onClick={() => setAddingKr(true)}
-          className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 rounded text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors border border-dashed border-[var(--border)]"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Key Result
-        </button>
+        <>
+          <div className="mb-3">
+            <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)] mb-1">
+              <span>Overall progress</span>
+              <span className="tabular-nums">{Math.round(overallPct)}%</span>
+            </div>
+            <div className="h-2 bg-[var(--bg-surface)] rounded overflow-hidden">
+              <div className="h-full bg-[var(--accent)] transition-all" style={{ width: `${overallPct}%` }} />
+            </div>
+          </div>
+
+          <div>
+            {objective.keyResults.map((kr, i) => (
+              <KeyResultRow key={kr.id} objectiveId={objective.id} projectId={projectId} kr={kr} index={i} total={objective.keyResults.length} />
+            ))}
+          </div>
+
+          {addingKr ? (
+            <div className="mt-3 pt-3 border-t border-[var(--border)] flex flex-col gap-2">
+              <input
+                autoFocus
+                value={newKrTitle}
+                onChange={(e) => setNewKrTitle(e.target.value)}
+                placeholder="Key result title..."
+                className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={newKrStartDate}
+                  onChange={(e) => setNewKrStartDate(e.target.value)}
+                  className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+                />
+                <span className="text-xs text-[var(--text-tertiary)]">to</span>
+                <input
+                  type="date"
+                  value={newKrEndDate}
+                  onChange={(e) => setNewKrEndDate(e.target.value)}
+                  className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={newKrTarget}
+                  onChange={(e) => setNewKrTarget(e.target.value)}
+                  placeholder="Target"
+                  min="0"
+                  step="any"
+                  className="w-24 px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+                />
+                <input
+                  value={newKrUnit}
+                  onChange={(e) => setNewKrUnit(e.target.value)}
+                  placeholder="Unit (optional)"
+                  maxLength={32}
+                  className="flex-1 px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+                />
+                <button
+                  onClick={handleAddKr}
+                  className="px-3 py-1.5 rounded bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-xs font-medium text-[var(--text-primary)]"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => {
+                    setAddingKr(false);
+                    setNewKrTitle('');
+                    setNewKrTarget('100');
+                    setNewKrUnit('');
+                    setNewKrStartDate('');
+                    setNewKrEndDate('');
+                  }}
+                  className="px-3 py-1.5 rounded text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setAddingKr(true)}
+              className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 rounded text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors border border-dashed border-[var(--border)]"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Key Result
+            </button>
+          )}
+        </>
       )}
 
       {editing && <ObjectiveCreateModal objective={objective} onClose={() => setEditing(false)} />}
