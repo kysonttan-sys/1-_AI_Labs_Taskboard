@@ -162,12 +162,13 @@ export async function POST(request: NextRequest) {
   const ollamaUrl = process.env.OLLAMA_URL;
   const ollamaModel = process.env.OLLAMA_MODEL || 'llama3.1';
   const ollamaApiKey = process.env.OLLAMA_API_KEY;
+  const ollamaBasicAuth = process.env.OLLAMA_BASIC_AUTH;
 
   if (!ollamaUrl) {
     return NextResponse.json(
       {
         suggestion:
-          'AI assistant is not configured yet. The admin needs to set OLLAMA_URL, OLLAMA_MODEL, and OLLAMA_API_KEY environment variables and expose the local Ollama via Tailscale Funnel.',
+          'AI assistant is not configured yet. The admin needs to set OLLAMA_URL and OLLAMA_MODEL. Important: Ollama itself has no built-in API key. If you expose it with Tailscale Funnel, you must also run a reverse proxy (Caddy/Nginx) with an API key or basic auth in front of Ollama.',
       },
       { status: 503 },
     );
@@ -200,8 +201,11 @@ export async function POST(request: NextRequest) {
     const headers: Record<string, string> = {
       'content-type': 'application/json',
     };
-    if (ollamaApiKey) {
-      headers['x-api-key'] = ollamaApiKey;
+    if (ollamaBasicAuth) {
+      headers['authorization'] = `Basic ${Buffer.from(ollamaBasicAuth).toString('base64')}`;
+    } else if (ollamaApiKey) {
+      // The upstream proxy (Caddy/Nginx) checks this token; Ollama itself does not accept API keys.
+      headers['authorization'] = `Bearer ${ollamaApiKey}`;
     }
 
     const res = await fetch(url, {
@@ -231,7 +235,14 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      { suggestion: `Could not reach the local Ollama instance. Tailscale Funnel may be offline or OLLAMA_URL is wrong. (${message})` },
+      {
+        suggestion:
+          `Could not reach the local Ollama instance. ` +
+          `Make sure: 1) Ollama is running on your PC, ` +
+          `2) the upstream proxy/reverse proxy is running, ` +
+          `3) Tailscale Funnel is active, ` +
+          `4) OLLAMA_URL on Render points to the correct https://...ts.net URL. (${message})`,
+      },
       { status: 503 },
     );
   }

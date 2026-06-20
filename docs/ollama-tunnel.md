@@ -1,6 +1,8 @@
-# Expose local Ollama to Render (Option A — Cloudflare Tunnel)
+# Expose local Ollama to Render via Cloudflare Tunnel (alternative)
 
-This lets the Taskboard app on Render talk to a local Ollama instance on
+> The current recommended setup uses **Tailscale Funnel**. See [`docs/ollama-tailscale.md`](./ollama-tailscale.md) for the Tailscale guide.
+
+This is an alternative that lets the Taskboard app on Render talk to a local Ollama instance on
 your laptop. Useful for demos, dev, or small-team use. Your laptop must
 stay online while the tunnel is up.
 
