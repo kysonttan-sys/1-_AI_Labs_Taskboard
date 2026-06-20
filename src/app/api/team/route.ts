@@ -35,10 +35,10 @@ export async function PATCH(request: NextRequest) {
   const { session, response } = await requireAdmin();
   if (!session) return response;
 
-  const { userId, role, jobTitle } = await request.json();
+  const { userId, role, jobTitle, pin } = await request.json();
   if (!userId) return NextResponse.json({ error: 'userId is required' }, { status: 400 });
 
-  const data: { role?: string; jobTitle?: string | null } = {};
+  const data: { role?: string; jobTitle?: string | null; pin?: string } = {};
 
   if (role !== undefined) {
     if (!['admin', 'member'].includes(role)) {
@@ -61,6 +61,14 @@ export async function PATCH(request: NextRequest) {
 
   if (jobTitle !== undefined) {
     data.jobTitle = jobTitle ? jobTitle.trim() : null;
+  }
+
+  if (pin !== undefined) {
+    if (typeof pin !== 'string' || pin.length < 4) {
+      return NextResponse.json({ error: 'PIN must be at least 4 characters' }, { status: 400 });
+    }
+    const bcrypt = await import('bcryptjs');
+    data.pin = await bcrypt.hash(pin, 10);
   }
 
   const user = await prisma.user.update({

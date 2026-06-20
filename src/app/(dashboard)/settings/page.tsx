@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Settings, Users, Trash2, Plus, Calendar, Unlink, Shield, User } from 'lucide-react';
+import { Settings, Users, Trash2, Plus, Calendar, Unlink, Shield, User, KeyRound, Check, X } from 'lucide-react';
 import { getInitials } from '@/lib/utils/initials';
 
 interface User {
@@ -17,6 +17,8 @@ export default function SettingsPage() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberPin, setNewMemberPin] = useState('');
   const [newMemberJobTitle, setNewMemberJobTitle] = useState('');
+  const [resetPinUserId, setResetPinUserId] = useState<string | null>(null);
+  const [resetPinValue, setResetPinValue] = useState('');
   const [googleConnected, setGoogleConnected] = useState(false);
 
   useEffect(() => {
@@ -81,6 +83,32 @@ export default function SettingsPage() {
       body: JSON.stringify({ userId: id }),
     });
     loadUsers();
+  }
+
+  async function resetPin(id: string) {
+    const pin = resetPinValue.trim();
+    if (pin.length < 4) {
+      alert('PIN must be at least 4 characters');
+      return;
+    }
+    const res = await fetch('/api/team', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: id, pin }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || 'Failed to reset PIN');
+      return;
+    }
+    setResetPinUserId(null);
+    setResetPinValue('');
+    loadUsers();
+  }
+
+  function cancelResetPin() {
+    setResetPinUserId(null);
+    setResetPinValue('');
   }
 
   async function checkGoogleCalendar() {
@@ -180,6 +208,41 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {resetPinUserId === user.id ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="password"
+                      value={resetPinValue}
+                      onChange={(e) => setResetPinValue(e.target.value)}
+                      placeholder="New PIN"
+                      autoFocus
+                      className="w-28 px-2 py-1.5 bg-[var(--bg-base)] border border-[var(--border)] rounded-md text-xs text-[var(--text-primary)] focus-ring"
+                    />
+                    <button
+                      onClick={() => resetPin(user.id)}
+                      disabled={resetPinValue.trim().length < 4}
+                      className="p-1.5 rounded bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-primary)] disabled:opacity-50"
+                      title="Save new PIN"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={cancelResetPin}
+                      className="p-1.5 rounded text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]"
+                      title="Cancel"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setResetPinUserId(user.id)}
+                    className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors rounded"
+                    title="Reset PIN"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                  </button>
+                )}
                 <div className="relative">
                   <select
                     value={user.role}
