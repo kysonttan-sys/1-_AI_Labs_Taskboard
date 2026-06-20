@@ -35,6 +35,7 @@ interface MeetingState {
   error: string | null;
   socket: Socket | null;
   peerConnections: Map<string, PeerConnection>;
+  peerConnectionStates: Map<string, RTCPeerConnectionState>;
   turnServers: RTCIceServer[] | null;
   connectionState: 'unknown' | 'connected' | 'relayed' | 'failed';
 
@@ -58,6 +59,8 @@ interface MeetingState {
   _setScreenSharing: (screenSharing: boolean) => void;
   _addPeerConnection: (key: string, pc: PeerConnection) => void;
   _removePeerConnection: (key: string) => void;
+  _setPeerConnectionState: (socketId: string, kind: 'audio' | 'screen', state: RTCPeerConnectionState) => void;
+  _onRemoteTrack: (socketId: string, kind: 'audio' | 'screen', track: MediaStreamTrack, stream: MediaStream) => void;
 }
 
 export const useMeetingStore = create<MeetingState>((set, get) => ({
@@ -71,6 +74,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
   error: null,
   socket: null,
   peerConnections: new Map(),
+  peerConnectionStates: new Map(),
   turnServers: null,
   connectionState: 'unknown',
 
@@ -111,12 +115,38 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
       set({ error: 'Meeting connection failed' });
     });
 
+    socket.on('meeting-kicked', ({ reason }: { reason: string }) => {
+      get().leaveMeeting();
+      set({ error: `Removed from meeting: ${reason}` });
+    });
+
     socket.on('disconnect', () => {
       get().leaveMeeting();
     });
 
-    socket.on('meeting-participants', (participants: MeetingParticipant[]) => {
+    socket.on('meeting-participants', async (participants: MeetingParticipant[]) => {
       set({ participants });
+
+      // Symmetric negotiation: when we get the full participant list after
+      // joining, create offers to any existing participants we don't already
+      // have a peer connection with.
+      const state = get();
+      if (!state.joined || !state.socket) return;
+      const onRemoteTrack = state._onRemoteTrack;
+      const onConnectionStateChange = state._setPeerConnectionState;
+      for (const p of participants) {
+        if (p.socketId === state.socket.id) continue;
+        if (state.peerConnections.has(`${p.socketId}:audio`)) continue;
+        await createOfferForPeer(p.socketId, 'audio', state.localAudioStream, {
+          socket: state.socket,
+          turnServers: state.turnServers,
+          participants: state.participants,
+          addPeerConnection: state._addPeerConnection,
+          addOrUpdateParticipant: state._addOrUpdateParticipant,
+          onRemoteTrack,
+          onConnectionStateChange,
+        });
+      }
     });
 
     socket.on('user-joined-meeting', async ({ socketId, userId, userName }: { socketId: string; userId: string; userName: string }) => {
@@ -129,6 +159,8 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
           participants: state.participants,
           addPeerConnection: state._addPeerConnection,
           addOrUpdateParticipant: state._addOrUpdateParticipant,
+          onRemoteTrack: state._onRemoteTrack,
+          onConnectionStateChange: state._setPeerConnectionState,
         });
         if (state.screenSharing && state.localScreenStream) {
           await createOfferForPeer(socketId, 'screen', state.localScreenStream, {
@@ -137,6 +169,8 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
             participants: state.participants,
             addPeerConnection: state._addPeerConnection,
             addOrUpdateParticipant: state._addOrUpdateParticipant,
+            onRemoteTrack: state._onRemoteTrack,
+            onConnectionStateChange: state._setPeerConnectionState,
           });
         }
       }
@@ -164,6 +198,8 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
         participants: state.participants,
         addPeerConnection: state._addPeerConnection,
         addOrUpdateParticipant: state._addOrUpdateParticipant,
+        onRemoteTrack: state._onRemoteTrack,
+        onConnectionStateChange: state._setPeerConnectionState,
       });
     });
 
@@ -197,6 +233,7 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
   },
 
   joinMeeting: async (room) => {
+    await get().fetchTurnServers();
     const socket = get().initSocket();
     if (!socket.connected) {
       await new Promise<void>((resolve) => {
@@ -237,6 +274,8 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
       screenSharing: false,
       participants: [],
       peerConnections: new Map(),
+      peerConnectionStates: new Map(),
+      connectionState: 'unknown',
     });
   },
 
@@ -286,6 +325,8 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
           participants: state.participants,
           addPeerConnection: state._addPeerConnection,
           addOrUpdateParticipant: state._addOrUpdateParticipant,
+          onRemoteTrack: state._onRemoteTrack,
+          onConnectionStateChange: state._setPeerConnectionState,
         });
       }
     } catch (err) {
@@ -324,6 +365,36 @@ export const useMeetingStore = create<MeetingState>((set, get) => ({
     set((s) => {
       const map = new Map(s.peerConnections);
       map.delete(key);
-      return { peerConnections: map };
+      const states = new Map(s.peerConnectionStates);
+      states.delete(key);
+      return { peerConnections: map, peerConnectionStates: states };
     }),
+  _setPeerConnectionState: (socketId, kind, state) =>
+    set((s) => {
+      const key = `${socketId}:${kind}`;
+      const states = new Map(s.peerConnectionStates);
+      states.set(key, state);
+
+      // Aggregate audio peer connection states into a single UI state.
+      let hasFailed = false;
+      let hasConnected = false;
+      for (const conn of Array.from(s.peerConnections.values())) {
+        if (conn.kind !== 'audio') continue;
+        const connState = states.get(`${conn.socketId}:audio`) || 'new';
+        if (connState === 'failed' || connState === 'closed') {
+          hasFailed = true;
+        } else if (connState === 'connected') {
+          hasConnected = true;
+        }
+      }
+
+      let connectionState: 'unknown' | 'connected' | 'relayed' | 'failed' = 'unknown';
+      if (hasFailed && !hasConnected) connectionState = 'failed';
+      else if (hasConnected) connectionState = 'connected';
+
+      return { peerConnectionStates: states, connectionState };
+    }),
+  _onRemoteTrack: () => {
+    // Components observe participant.audioStream directly; no store action needed.
+  },
 }));

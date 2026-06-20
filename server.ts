@@ -153,7 +153,19 @@ app.prepare()
       socket.join(room);
 
       if (!meetingRooms.has(room)) meetingRooms.set(room, new Map());
-      meetingRooms.get(room)!.set(socket.id, { userId, userName, muted: true, screenSharing: false });
+
+      // Remove any stale entries for the same user to prevent duplicate
+      // participants when a client reconnects or opens a second tab.
+      const roomParticipants = meetingRooms.get(room)!;
+      for (const [existingSocketId, participant] of Array.from(roomParticipants.entries())) {
+        if (participant.userId === userId && existingSocketId !== socket.id) {
+          roomParticipants.delete(existingSocketId);
+          io.to(existingSocketId).emit('meeting-kicked', { reason: 'replaced by newer connection' });
+          socket.to(room).emit('user-left-meeting', { socketId: existingSocketId, userId });
+        }
+      }
+
+      roomParticipants.set(socket.id, { userId, userName, muted: true, screenSharing: false });
 
       broadcastParticipants(room);
 

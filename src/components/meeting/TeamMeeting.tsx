@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Mic, MicOff, MonitorUp, MonitorX, PhoneOff, Users, Radio, User } from 'lucide-react';
-import { useMeetingStore } from '@/features/meeting/meetingStore';
+import { useMeetingStore, type MeetingParticipant } from '@/features/meeting/meetingStore';
 import { useAuthStore } from '@/features/auth/authStore';
 
 export default function TeamMeeting() {
@@ -14,6 +14,7 @@ export default function TeamMeeting() {
     screenSharing,
     error,
     connectionState,
+    turnServers,
     joinMeeting,
     leaveMeeting,
     toggleMute,
@@ -58,7 +59,17 @@ export default function TeamMeeting() {
     );
   }
 
-  const others = participants.filter((p) => p.userId !== user?.id);
+  // Defensive deduplication: if the same userId appears multiple times (e.g.
+  // reconnection race), keep only the newest socket id entry.
+  const seen = new Map<string, MeetingParticipant>();
+  for (const p of participants) {
+    if (p.userId === user?.id) continue;
+    const existing = seen.get(p.userId);
+    if (!existing || p.socketId > existing.socketId) {
+      seen.set(p.userId, p);
+    }
+  }
+  const others = Array.from(seen.values());
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -85,6 +96,7 @@ export default function TeamMeeting() {
                 ? 'text-red-400'
                 : 'text-[var(--text-tertiary)]'
             }`}
+            title={!turnServers ? 'No TURN server configured; calls may fail across strict networks' : undefined}
           >
             {connectionState === 'connected'
               ? 'Direct'
@@ -93,6 +105,7 @@ export default function TeamMeeting() {
               : connectionState === 'failed'
               ? 'Connection issue'
               : 'Connecting...'}
+            {!turnServers && ' · no TURN'}
           </span>
         </div>
 
@@ -236,14 +249,30 @@ function ParticipantCard({
   );
 }
 
-function RemoteParticipantCard({ participant }: { participant: import('@/features/meeting/meetingStore').MeetingParticipant }) {
+function RemoteParticipantCard({ participant }: { participant: MeetingParticipant }) {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    if (audioRef.current && participant.audioStream) {
-      audioRef.current.srcObject = participant.audioStream;
-      audioRef.current.play().catch(() => {});
-    }
+    if (!audioRef.current || !participant.audioStream) return;
+    const audioEl = audioRef.current;
+    audioEl.srcObject = participant.audioStream;
+    audioEl.play().catch(() => {});
+
+    // When a user joins muted, the remote audio track starts muted and the
+    // audio element may pause. Ensure playback resumes as soon as they unmute.
+    const handlers = participant.audioStream.getAudioTracks().map((track) => {
+      const handleUnmute = () => {
+        audioEl.play().catch(() => {});
+      };
+      track.addEventListener('unmute', handleUnmute);
+      return { track, handleUnmute };
+    });
+
+    return () => {
+      handlers.forEach(({ track, handleUnmute }) => {
+        track.removeEventListener('unmute', handleUnmute);
+      });
+    };
   }, [participant.audioStream]);
 
   // Determine if participant is speaking by checking audio track activity? WebRTC doesn't give easy speaking detection.

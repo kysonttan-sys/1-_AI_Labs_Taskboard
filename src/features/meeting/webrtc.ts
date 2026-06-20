@@ -43,6 +43,8 @@ interface CreateOfferDeps {
   participants: MeetingParticipant[];
   addPeerConnection: (key: string, conn: PeerConnection) => void;
   addOrUpdateParticipant: (participant: MeetingParticipant) => void;
+  onRemoteTrack?: (socketId: string, kind: 'audio' | 'screen', track: MediaStreamTrack, stream: MediaStream) => void;
+  onConnectionStateChange?: (socketId: string, kind: 'audio' | 'screen', state: RTCPeerConnectionState) => void;
 }
 
 export async function createOfferForPeer(
@@ -51,7 +53,7 @@ export async function createOfferForPeer(
   stream: MediaStream | null,
   deps: CreateOfferDeps
 ): Promise<void> {
-  const { socket, turnServers, participants, addPeerConnection, addOrUpdateParticipant } = deps;
+  const { socket, turnServers, participants, addPeerConnection, addOrUpdateParticipant, onRemoteTrack, onConnectionStateChange } = deps;
 
   const key = `${targetId}:${kind}`;
 
@@ -64,6 +66,7 @@ export async function createOfferForPeer(
   };
 
   pc.onconnectionstatechange = () => {
+    onConnectionStateChange?.(targetId, kind, pc.connectionState);
     if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
       cleanupPeerConnection(pc);
     }
@@ -85,6 +88,7 @@ export async function createOfferForPeer(
       }),
       ...(kind === 'audio' ? { audioStream: remoteStream } : { screenStream: remoteStream }),
     });
+    onRemoteTrack?.(targetId, kind, event.track, remoteStream);
   };
 
   addPeerConnection(key, { pc, socketId: targetId, kind });
@@ -102,6 +106,8 @@ interface HandleOfferDeps {
   participants: MeetingParticipant[];
   addPeerConnection: (key: string, conn: PeerConnection) => void;
   addOrUpdateParticipant: (participant: MeetingParticipant) => void;
+  onRemoteTrack?: (socketId: string, kind: 'audio' | 'screen', track: MediaStreamTrack, stream: MediaStream) => void;
+  onConnectionStateChange?: (socketId: string, kind: 'audio' | 'screen', state: RTCPeerConnectionState) => void;
 }
 
 export async function handleRemoteOffer(
@@ -119,6 +125,8 @@ export async function handleRemoteOffer(
     participants,
     addPeerConnection,
     addOrUpdateParticipant,
+    onRemoteTrack,
+    onConnectionStateChange,
   } = deps;
 
   const key = `${senderId}:${kind}`;
@@ -144,6 +152,7 @@ export async function handleRemoteOffer(
   };
 
   pc.onconnectionstatechange = () => {
+    onConnectionStateChange?.(senderId, kind, pc.connectionState);
     if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
       cleanupPeerConnection(pc);
     }
@@ -168,6 +177,7 @@ export async function handleRemoteOffer(
       ...participant,
       ...(kind === 'audio' ? { audioStream: remoteStream } : { screenStream: remoteStream }),
     });
+    onRemoteTrack?.(senderId, kind, event.track, remoteStream);
   };
 
   addPeerConnection(key, { pc, socketId: senderId, kind });
