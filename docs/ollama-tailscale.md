@@ -35,11 +35,13 @@ ollama pull llama3.1
 
 Create a file named `Caddyfile` in the folder where you will run Caddy:
 
-```caddyfile
 :8080 {
     @hasToken header X-Taskboard-Key "my-secret-token-123"
     handle @hasToken {
-        reverse_proxy 127.0.0.1:11434
+        reverse_proxy 127.0.0.1:11434 {
+            # Ollama binds to localhost and may reject non-local Host headers.
+            header_up Host 127.0.0.1:11434
+        }
     }
     handle {
         respond "Unauthorized" 401
