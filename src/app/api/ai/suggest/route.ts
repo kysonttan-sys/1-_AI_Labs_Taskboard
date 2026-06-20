@@ -204,8 +204,9 @@ export async function POST(request: NextRequest) {
     if (ollamaBasicAuth) {
       headers['authorization'] = `Basic ${Buffer.from(ollamaBasicAuth).toString('base64')}`;
     } else if (ollamaApiKey) {
-      // The upstream proxy (Caddy/Nginx) checks this token; Ollama itself does not accept API keys.
-      headers['authorization'] = `Bearer ${ollamaApiKey}`;
+      // Tailscale Funnel can strip/interfere with the standard Authorization header, so we send
+      // the token in a custom header. The Caddy/Nginx proxy in front of Ollama checks this header.
+      headers['x-taskboard-key'] = ollamaApiKey;
     }
 
     const res = await fetch(url, {

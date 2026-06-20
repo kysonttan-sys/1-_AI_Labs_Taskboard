@@ -37,7 +37,7 @@ Create a file named `Caddyfile` in the folder where you will run Caddy:
 
 ```caddyfile
 :8080 {
-    @hasToken header Authorization "Bearer my-secret-token-123"
+    @hasToken header X-Taskboard-Key "my-secret-token-123"
     handle @hasToken {
         reverse_proxy 127.0.0.1:11434
     }
@@ -77,7 +77,7 @@ https://your-pc.tailnet-name.ts.net
 Test it from any machine:
 
 ```bash
-curl -H "Authorization: Bearer my-secret-token-123" https://your-pc.tailnet-name.ts.net/api/tags
+curl -H "X-Taskboard-Key: my-secret-token-123" https://your-pc.tailnet-name.ts.net/api/tags
 ```
 
 You should see a list of tags. Without the header, you should get `401 Unauthorized`.
@@ -92,7 +92,7 @@ OLLAMA_MODEL=llama3.1
 OLLAMA_API_KEY=my-secret-token-123
 ```
 
-`OLLAMA_API_KEY` is sent as `Authorization: Bearer ...` to Caddy. It is **not** checked by Ollama itself.
+`OLLAMA_API_KEY` is sent as a custom `X-Taskboard-Key` header to Caddy. We use a custom header because Tailscale Funnel can strip or interfere with the standard `Authorization` header. It is **not** checked by Ollama itself.
 
 Save. Render will redeploy.
 
