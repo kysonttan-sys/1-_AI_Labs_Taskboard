@@ -21,6 +21,8 @@ import {
 import { pct } from '@/features/okrs/progress';
 import ObjectiveCard from '@/app/(dashboard)/okrs/ObjectiveCard';
 import GanttChart from '@/components/calendar/GanttChart';
+import ProjectAiContextEditor from '@/components/ai/ProjectAiContextEditor';
+import AiSuggestionPanel from '@/components/ai/AiSuggestionPanel';
 
 type TabKey = 'overview' | 'okrs' | 'boards' | 'gantt';
 
@@ -229,6 +231,10 @@ export default function ProjectDetailPage() {
               <div className="text-xs text-[var(--text-tertiary)] mt-1">active assignees</div>
             </div>
           </div>
+
+          <ProjectAiContextEditor projectId={projectId} initialContext={project.aiContext} />
+
+          <AiSuggestionPanel projectId={projectId} className="" />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Upcoming deadlines */}

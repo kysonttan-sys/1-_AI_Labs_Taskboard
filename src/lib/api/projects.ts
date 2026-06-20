@@ -2,6 +2,7 @@ export interface Project {
   id: string;
   name: string;
   description: string | null;
+  aiContext: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -9,6 +10,7 @@ export interface Project {
 export type CreateProjectInput = {
   name: string;
   description?: string;
+  aiContext?: string;
 };
 
 export type UpdateProjectInput = Partial<CreateProjectInput>;

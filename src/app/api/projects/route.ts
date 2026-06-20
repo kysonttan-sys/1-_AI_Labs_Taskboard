@@ -8,6 +8,14 @@ export async function GET() {
 
   const projects = await prisma.project.findMany({
     orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      aiContext: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
 
   return NextResponse.json(projects);
@@ -18,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (response) return response;
 
   const body = await request.json();
-  const { name, description } = body;
+  const { name, description, aiContext } = body;
 
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
@@ -32,6 +40,7 @@ export async function POST(request: NextRequest) {
     data: {
       name: name.trim(),
       description: description?.trim() || null,
+      aiContext: aiContext?.trim() || null,
     },
   });
 

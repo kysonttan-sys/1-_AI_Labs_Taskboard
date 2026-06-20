@@ -11,6 +11,7 @@ import {
   Activity,
 } from 'lucide-react';
 import Link from 'next/link';
+import AiSuggestionPanel from '@/components/ai/AiSuggestionPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -183,6 +184,8 @@ export default async function DigestPage() {
             </div>
           </div>
         </div>
+
+        <AiSuggestionPanel className="mb-6" />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Completed this week */}

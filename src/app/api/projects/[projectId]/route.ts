@@ -39,7 +39,7 @@ export async function PATCH(
   if (access.response) return access.response;
 
   const body = await request.json();
-  const { name, description } = body;
+  const { name, description, aiContext } = body;
 
   if (name !== undefined) {
     if (typeof name !== 'string' || name.trim() === '') {
@@ -55,6 +55,7 @@ export async function PATCH(
     data: {
       ...(name !== undefined && { name: name.trim() }),
       ...(description !== undefined && { description: description?.trim() || null }),
+      ...(aiContext !== undefined && { aiContext: aiContext?.trim() || null }),
     },
   });
 
