@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useOkrStore } from '@/features/okrs/okrStore';
 import { Plus, Pencil, Trash2, Calendar, ChevronDown, ChevronRight } from 'lucide-react';
+import { AiAssistButton } from '@/components/ai/AiAssistButton';
 import { useCollapsedIds } from '@/lib/hooks/useCollapsedIds';
 import KeyResultRow from './KeyResultRow';
 import ObjectiveCreateModal from './ObjectiveCreateModal';
@@ -131,13 +132,22 @@ export default function ObjectiveCard({ objective, projectId, overallPct }: Prop
 
           {addingKr ? (
             <div className="mt-3 pt-3 border-t border-[var(--border)] flex flex-col gap-2">
-              <input
-                autoFocus
-                value={newKrTitle}
-                onChange={(e) => setNewKrTitle(e.target.value)}
-                placeholder="Key result title..."
-                className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
-              />
+              <div className="flex items-start gap-1.5">
+                <input
+                  autoFocus
+                  value={newKrTitle}
+                  onChange={(e) => setNewKrTitle(e.target.value)}
+                  placeholder="Key result title..."
+                  className="flex-1 px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+                />
+                <AiAssistButton
+                  field="key-result-title"
+                  value={newKrTitle}
+                  projectId={projectId}
+                  objectiveId={objective.id}
+                  onApply={(s) => setNewKrTitle(s.trim())}
+                />
+              </div>
               <div className="flex items-center gap-2">
                 <input
                   type="date"

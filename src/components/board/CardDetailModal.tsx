@@ -16,6 +16,7 @@ import CardComments from './CardComments';
 import { useBoardStore } from '@/features/board/boardStore';
 import type { Card, List } from '@/types';
 import { getInitials } from '@/lib/utils/initials';
+import { AiAssistButton } from '@/components/ai/AiAssistButton';
 
 interface UserOption {
   id: string;
@@ -314,20 +315,35 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
 
           {/* Title */}
           {isEditingTitle ? (
-            <input
-              autoFocus
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={commitTitle}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitTitle();
-                if (e.key === 'Escape') {
-                  setTitle(card.title);
-                  setIsEditingTitle(false);
-                }
-              }}
-              className="w-full text-xl font-semibold bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-primary)] focus-ring"
-            />
+            <div className="flex items-start gap-2">
+              <input
+                autoFocus
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={commitTitle}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitTitle();
+                  if (e.key === 'Escape') {
+                    setTitle(card.title);
+                    setIsEditingTitle(false);
+                  }
+                }}
+                className="flex-1 text-xl font-semibold bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-primary)] focus-ring"
+              />
+              <AiAssistButton
+                field="card-title"
+                value={title}
+                projectId={currentBoard?.projectId}
+                cardId={card.id}
+                onApply={(s) => {
+                  const trimmed = s.trim();
+                  setTitle(trimmed);
+                  if (trimmed && trimmed !== card.title) {
+                    persist({ title: trimmed });
+                  }
+                }}
+              />
+            </div>
           ) : (
             <h2
               onClick={() => setIsEditingTitle(true)}
@@ -342,14 +358,28 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
             <label className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-1 block">
               Description
             </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              onBlur={commitDescription}
-              placeholder="Add a description..."
-              rows={3}
-              className="w-full bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus-ring resize-none"
-            />
+            <div className="flex items-start gap-2">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={commitDescription}
+                placeholder="Add a description..."
+                rows={3}
+                className="flex-1 bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus-ring resize-none"
+              />
+              <AiAssistButton
+                field="card-description"
+                value={description}
+                projectId={currentBoard?.projectId}
+                cardId={card.id}
+                onApply={(s) => {
+                  setDescription(s);
+                  if (s !== (card.description ?? '')) {
+                    persist({ description: s });
+                  }
+                }}
+              />
+            </div>
           </div>
 
           {/* Board, Status & Priority row */}

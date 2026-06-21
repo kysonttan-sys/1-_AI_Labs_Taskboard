@@ -5,6 +5,7 @@ import { useOkrStore } from '@/features/okrs/okrStore';
 import { pct, formatValue } from '@/features/okrs/progress';
 import { format, parseISO } from 'date-fns';
 import { Trash2, Pencil, Check, X, ChevronUp, ChevronDown, ChevronRight, Plus, Calendar } from 'lucide-react';
+import { AiAssistButton } from '@/components/ai/AiAssistButton';
 import { useCollapsedIds } from '@/lib/hooks/useCollapsedIds';
 import StatusBadge from '@/components/board/StatusBadge';
 import type { LinkedTask, CreateKeyResultTaskInput } from '@/lib/api/okrs';
@@ -150,13 +151,22 @@ export default function KeyResultRow({ objectiveId, projectId, kr, index, total 
     return (
       <div className="py-3 border-t border-[var(--border)] first:border-t-0">
         <div className="flex flex-col gap-2">
-          <input
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            placeholder="Key result title..."
-            maxLength={200}
-            className="w-full px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
-          />
+          <div className="flex items-start gap-1.5">
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              placeholder="Key result title..."
+              maxLength={200}
+              className="flex-1 px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+            />
+            <AiAssistButton
+              field="key-result-title"
+              value={editTitle}
+              projectId={projectId}
+              objectiveId={objectiveId}
+              onApply={(s) => setEditTitle(s.trim())}
+            />
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="date"

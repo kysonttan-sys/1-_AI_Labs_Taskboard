@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useProjectStore } from '@/features/projects/projectStore';
 import { FileText, Save, Loader2 } from 'lucide-react';
+import { AiAssistButton } from './AiAssistButton';
 
 interface ProjectAiContextEditorProps {
   projectId: string;
@@ -37,12 +38,20 @@ export default function ProjectAiContextEditor({ projectId, initialContext }: Pr
         Describe what this project is about, goals, scope, stakeholders, or any background. The AI uses this to give
         better suggestions for this project.
       </p>
-      <textarea
-        value={context}
-        onChange={(e) => setContext(e.target.value)}
-        placeholder="Example: This project builds a customer self-service portal. Goals: reduce support tickets by 20%, launch by end of Q3. Stakeholders: Marketing and Customer Success."
-        className="w-full min-h-[120px] rounded-md border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 resize-y"
-      />
+      <div className="flex items-start gap-2">
+        <textarea
+          value={context}
+          onChange={(e) => setContext(e.target.value)}
+          placeholder="Example: This project builds a customer self-service portal. Goals: reduce support tickets by 20%, launch by end of Q3. Stakeholders: Marketing and Customer Success."
+          className="flex-1 min-h-[120px] rounded-md border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 resize-y"
+        />
+        <AiAssistButton
+          field="project-context"
+          value={context}
+          projectId={projectId}
+          onApply={(s) => setContext(s.trim())}
+        />
+      </div>
       <div className="flex items-center gap-3">
         <button
           onClick={handleSave}

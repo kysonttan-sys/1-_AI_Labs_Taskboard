@@ -20,7 +20,8 @@ interface KanbanColumnProps {
 
 export default function KanbanColumn({ list, onAddCard, onCardClick }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({ id: list.id });
-  const { deleteList, updateList } = useBoardStore();
+  const { deleteList, updateList, boards } = useBoardStore();
+  const currentBoard = boards.find((b) => b.id === list.boardId);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const parentRef = useRef<HTMLDivElement>(null);
@@ -139,7 +140,7 @@ export default function KanbanColumn({ list, onAddCard, onCardClick }: KanbanCol
 
       {/* Add card */}
       <div className="px-2 pb-2">
-        <AddCardInput listId={list.id} onAdd={onAddCard} />
+        <AddCardInput listId={list.id} projectId={currentBoard?.projectId} onAdd={onAddCard} />
       </div>
     </div>
   );
