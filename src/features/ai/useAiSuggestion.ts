@@ -2,19 +2,21 @@
 
 import { useState, useCallback } from 'react';
 
-export type PromptType = 'focus' | 'suggest-okrs' | 'suggest-tasks' | 'missing-steps' | 'project-next-steps';
+export type PromptType = 'focus' | 'suggest-okrs' | 'suggest-tasks' | 'missing-steps' | 'project-next-steps' | 'custom';
 
 interface AskOptions {
   promptType: PromptType;
   projectId?: string;
+  question?: string;
 }
 
 export function useAiSuggestion() {
   const [suggestion, setSuggestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastQuestion, setLastQuestion] = useState('');
 
-  const ask = useCallback(async ({ promptType, projectId }: AskOptions) => {
+  const ask = useCallback(async ({ promptType, projectId, question }: AskOptions) => {
     setLoading(true);
     setError(null);
     setSuggestion('');
@@ -22,7 +24,7 @@ export function useAiSuggestion() {
       const res = await fetch('/api/ai/suggest', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ promptType, projectId }),
+        body: JSON.stringify({ promptType, projectId, question }),
       });
 
       const data = await res.json().catch(() => ({ suggestion: 'No response from AI service.' }));
@@ -32,6 +34,7 @@ export function useAiSuggestion() {
       }
 
       setSuggestion(data.suggestion || '');
+      if (question) setLastQuestion(question);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -42,7 +45,8 @@ export function useAiSuggestion() {
   const reset = useCallback(() => {
     setSuggestion('');
     setError(null);
+    setLastQuestion('');
   }, []);
 
-  return { suggestion, loading, error, ask, reset };
+  return { suggestion, loading, error, ask, reset, lastQuestion };
 }

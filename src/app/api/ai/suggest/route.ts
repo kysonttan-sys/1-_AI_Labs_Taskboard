@@ -4,7 +4,7 @@ import { requireSession, requireProjectAccess } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
 
-export type PromptType = 'focus' | 'suggest-okrs' | 'suggest-tasks' | 'missing-steps' | 'project-next-steps';
+export type PromptType = 'focus' | 'suggest-okrs' | 'suggest-tasks' | 'missing-steps' | 'project-next-steps' | 'custom';
 
 function fmtDate(date: Date | string | null) {
   if (!date) return 'no date';
@@ -136,8 +136,16 @@ function buildSystemPrompt() {
   return `You are a practical project-management AI. Use the provided project/OKR/task context to answer concisely. Be specific, cite task or OKR names when relevant, and suggest concrete, actionable next steps. Do not invent facts that are not in the context. If you are unsure, say so.`;
 }
 
-function buildUserPrompt(type: PromptType, context: Awaited<ReturnType<typeof buildGlobalContext>>) {
+function buildUserPrompt(
+  type: PromptType,
+  context: Awaited<ReturnType<typeof buildGlobalContext>>,
+  customQuestion?: string,
+) {
   const base = `Project context:\n${context.projectCtx || 'No projects'}\n\nOKRs:\n${context.okrCtx || 'No OKRs'}\n\nTasks:\n${context.cardCtx || 'No tasks'}`;
+
+  if (type === 'custom' && customQuestion) {
+    return `${base}\n\nAnswer the following question using the context above:\n${customQuestion}`;
+  }
 
   switch (type) {
     case 'focus':
@@ -174,7 +182,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { promptType?: unknown; projectId?: unknown };
+  let body: { promptType?: unknown; projectId?: unknown; question?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -183,6 +191,7 @@ export async function POST(request: NextRequest) {
 
   const promptType = (body.promptType as PromptType) || 'focus';
   const projectId = typeof body.projectId === 'string' ? body.projectId : undefined;
+  const question = typeof body.question === 'string' ? body.question : undefined;
 
   if (projectId) {
     const access = await requireProjectAccess(session, projectId);
@@ -194,7 +203,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const prompt = buildUserPrompt(promptType, context);
+  const prompt = buildUserPrompt(promptType, context, question);
 
   try {
     const url = `${ollamaUrl.replace(/\/$/, '')}/api/generate`;

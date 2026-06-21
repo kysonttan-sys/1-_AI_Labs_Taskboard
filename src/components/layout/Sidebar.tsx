@@ -20,6 +20,7 @@ import {
   Newspaper,
   ChevronDown,
   ChevronRight as ChevronRightIcon,
+  Video,
 } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/authStore';
 import { useBoardStore } from '@/features/board/boardStore';
@@ -419,6 +420,19 @@ export default function Sidebar() {
           >
             <CalendarDays className="h-4 w-4 shrink-0" />
             {!collapsed && <span>Timeline</span>}
+          </button>
+          <button
+            onClick={() => router.push('/meeting')}
+            className={`
+              w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors
+              ${pathname === '/meeting'
+                ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+                : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-secondary)]'
+              }
+            `}
+          >
+            <Video className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Meeting</span>}
           </button>
           <button
             onClick={() => router.push('/digest')}
