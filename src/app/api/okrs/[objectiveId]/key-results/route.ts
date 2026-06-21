@@ -18,7 +18,7 @@ export async function POST(
   const { response: objectiveResponse } = await requireObjectiveAccess(session, objectiveId);
   if (objectiveResponse) return objectiveResponse;
   const body = await request.json();
-  const { title, target, current, unit, startDate, endDate } = body;
+  const { title, target, current, unit, trackingMode, startDate, endDate } = body;
 
   if (!title || typeof title !== 'string' || title.trim() === '') {
     return NextResponse.json({ error: 'title is required' }, { status: 400 });
@@ -41,6 +41,13 @@ export async function POST(
   }
   if (unit !== undefined && unit !== null && (typeof unit !== 'string' || unit.length > 32)) {
     return NextResponse.json({ error: 'unit must be a string up to 32 characters' }, { status: 400 });
+  }
+  const resolvedTrackingMode = trackingMode ?? (unit?.trim().toLowerCase() === '%' ? 'auto' : 'manual');
+  if (resolvedTrackingMode !== 'auto' && resolvedTrackingMode !== 'manual') {
+    return NextResponse.json({ error: 'trackingMode must be auto or manual' }, { status: 400 });
+  }
+  if (resolvedTrackingMode === 'auto' && unit?.trim().toLowerCase() !== '%') {
+    return NextResponse.json({ error: 'auto tracking requires unit to be %' }, { status: 400 });
   }
 
   const dateRange = parseIsoDateRange(startDate, endDate);
@@ -69,6 +76,7 @@ export async function POST(
             target,
             current: initialCurrent,
             unit: unit || null,
+            trackingMode: resolvedTrackingMode,
             objectiveId,
             position: nextPosition,
             startDate: dateRange.startDate,

@@ -1,9 +1,12 @@
+export type KeyResultTrackingMode = 'auto' | 'manual';
+
 export interface KeyResult {
   id: string;
   title: string;
   target: number;
   current: number;
   unit: string | null;
+  trackingMode: KeyResultTrackingMode;
   position: number;
   objectiveId: string;
   startDate: string;
@@ -52,6 +55,7 @@ export type CreateKeyResultInput = {
   target: number;
   current?: number;
   unit?: string;
+  trackingMode?: KeyResultTrackingMode;
   startDate: string;
   endDate: string;
 };

@@ -32,6 +32,8 @@ export async function recomputeLinkedKeyResults(cardId: string) {
   for (const keyResultId of Object.keys(byKeyResult)) {
     const krLinks = byKeyResult[keyResultId];
     if (!krLinks || krLinks.length === 0) continue;
+    // Only auto KRs are recomputed from linked card status.
+    if (krLinks[0].keyResult.trackingMode !== 'auto') continue;
     const totalWeight = krLinks.reduce((sum: number, l) => sum + l.weight, 0);
     if (totalWeight === 0) continue;
     const weighted = krLinks.reduce(

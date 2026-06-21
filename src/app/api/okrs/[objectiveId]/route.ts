@@ -10,6 +10,7 @@ function serializeKeyResult(kr: any): KeyResult {
     target: kr.target,
     current: kr.current,
     unit: kr.unit,
+    trackingMode: kr.trackingMode,
     position: kr.position,
     objectiveId: kr.objectiveId,
     startDate: kr.startDate.toISOString(),

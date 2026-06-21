@@ -22,6 +22,11 @@ function formatDateRange(start: string, end: string) {
   return `${new Date(start).toLocaleDateString('en-US', opts)} – ${new Date(end).toLocaleDateString('en-US', opts)}`;
 }
 
+function deriveTrackingMode(unit: string, mode: 'auto' | 'manual' | undefined): 'auto' | 'manual' {
+  if (mode) return mode;
+  return unit.trim().toLowerCase() === '%' ? 'auto' : 'manual';
+}
+
 export default function ObjectiveCard({ objective, projectId, overallPct }: Props) {
   const { addKeyResult, deleteObjective } = useOkrStore();
   const { isCollapsed, toggle } = useCollapsedIds('okr-collapsed-objectives');
@@ -30,6 +35,7 @@ export default function ObjectiveCard({ objective, projectId, overallPct }: Prop
   const [newKrTitle, setNewKrTitle] = useState('');
   const [newKrTarget, setNewKrTarget] = useState('100');
   const [newKrUnit, setNewKrUnit] = useState('');
+  const [newKrTrackingMode, setNewKrTrackingMode] = useState<'auto' | 'manual'>('manual');
   const [newKrStartDate, setNewKrStartDate] = useState('');
   const [newKrEndDate, setNewKrEndDate] = useState('');
 
@@ -43,16 +49,20 @@ export default function ObjectiveCard({ objective, projectId, overallPct }: Prop
     const target = Number(newKrTarget);
     if (!Number.isFinite(target) || target <= 0) return;
     if (!newKrStartDate || !newKrEndDate) return;
+    const unit = newKrUnit.trim() || undefined;
+    const trackingMode = deriveTrackingMode(newKrUnit, newKrTrackingMode);
     await addKeyResult(objective.id, {
       title: newKrTitle.trim(),
       target,
-      unit: newKrUnit.trim() || undefined,
+      unit,
+      trackingMode,
       startDate: newKrStartDate,
       endDate: newKrEndDate,
     });
     setNewKrTitle('');
     setNewKrTarget('100');
     setNewKrUnit('');
+    setNewKrTrackingMode('manual');
     setNewKrStartDate('');
     setNewKrEndDate('');
     setAddingKr(false);
@@ -175,7 +185,15 @@ export default function ObjectiveCard({ objective, projectId, overallPct }: Prop
                 />
                 <input
                   value={newKrUnit}
-                  onChange={(e) => setNewKrUnit(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewKrUnit(value);
+                    if (value.trim().toLowerCase() === '%') {
+                      setNewKrTrackingMode('auto');
+                    } else if (newKrTrackingMode === 'auto') {
+                      setNewKrTrackingMode('manual');
+                    }
+                  }}
                   placeholder="Unit (optional)"
                   maxLength={32}
                   className="flex-1 px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
@@ -192,6 +210,7 @@ export default function ObjectiveCard({ objective, projectId, overallPct }: Prop
                     setNewKrTitle('');
                     setNewKrTarget('100');
                     setNewKrUnit('');
+                    setNewKrTrackingMode('manual');
                     setNewKrStartDate('');
                     setNewKrEndDate('');
                   }}
@@ -199,6 +218,29 @@ export default function ObjectiveCard({ objective, projectId, overallPct }: Prop
                 >
                   Cancel
                 </button>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)]">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name={`kr-mode-${objective.id}-new`}
+                    checked={newKrTrackingMode === 'auto'}
+                    onChange={() => setNewKrTrackingMode('auto')}
+                    disabled={newKrUnit.trim().toLowerCase() !== '%'}
+                    className="accent-[var(--accent)]"
+                  />
+                  Auto (% from tasks)
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name={`kr-mode-${objective.id}-new`}
+                    checked={newKrTrackingMode === 'manual'}
+                    onChange={() => setNewKrTrackingMode('manual')}
+                    className="accent-[var(--accent)]"
+                  />
+                  Manual
+                </label>
               </div>
             </div>
           ) : (

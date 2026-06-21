@@ -17,6 +17,7 @@ interface Kr {
   target: number;
   current: number;
   unit: string | null;
+  trackingMode: 'auto' | 'manual';
   position: number;
   startDate: string;
   endDate: string;
@@ -49,6 +50,7 @@ export default function KeyResultRow({ objectiveId, projectId, kr, index, total 
   const [editTitle, setEditTitle] = useState(kr.title);
   const [editTarget, setEditTarget] = useState(String(kr.target));
   const [editUnit, setEditUnit] = useState(kr.unit ?? '');
+  const [editTrackingMode, setEditTrackingMode] = useState<'auto' | 'manual'>(kr.trackingMode);
   const [editStartDate, setEditStartDate] = useState(kr.startDate.slice(0, 10));
   const [editEndDate, setEditEndDate] = useState(kr.endDate.slice(0, 10));
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -106,6 +108,7 @@ export default function KeyResultRow({ objectiveId, projectId, kr, index, total 
         title,
         target,
         unit: editUnit.trim(),
+        trackingMode: editTrackingMode,
         startDate: editStartDate,
         endDate: editEndDate,
       });
@@ -119,6 +122,7 @@ export default function KeyResultRow({ objectiveId, projectId, kr, index, total 
     setEditTitle(kr.title);
     setEditTarget(String(kr.target));
     setEditUnit(kr.unit ?? '');
+    setEditTrackingMode(kr.trackingMode);
     setEditStartDate(kr.startDate.slice(0, 10));
     setEditEndDate(kr.endDate.slice(0, 10));
     setIsEditing(false);
@@ -194,7 +198,15 @@ export default function KeyResultRow({ objectiveId, projectId, kr, index, total 
             />
             <input
               value={editUnit}
-              onChange={(e) => setEditUnit(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setEditUnit(value);
+                if (value.trim().toLowerCase() === '%') {
+                  setEditTrackingMode('auto');
+                } else if (editTrackingMode === 'auto') {
+                  setEditTrackingMode('manual');
+                }
+              }}
               placeholder="Unit (optional)"
               maxLength={32}
               className="w-32 px-2 py-1.5 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
@@ -213,6 +225,29 @@ export default function KeyResultRow({ objectiveId, projectId, kr, index, total 
             >
               <X className="h-4 w-4" />
             </button>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)]">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="radio"
+                name={`kr-mode-${kr.id}`}
+                checked={editTrackingMode === 'auto'}
+                onChange={() => setEditTrackingMode('auto')}
+                disabled={editUnit.trim().toLowerCase() !== '%'}
+                className="accent-[var(--accent)]"
+              />
+              Auto (% from tasks)
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="radio"
+                name={`kr-mode-${kr.id}`}
+                checked={editTrackingMode === 'manual'}
+                onChange={() => setEditTrackingMode('manual')}
+                className="accent-[var(--accent)]"
+              />
+              Manual
+            </label>
           </div>
           {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
@@ -297,9 +332,13 @@ export default function KeyResultRow({ objectiveId, projectId, kr, index, total 
           }}
           step="any"
           min="0"
-          className="w-24 px-2 py-1 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] focus-ring"
+          readOnly={kr.trackingMode === 'auto'}
+          className={`w-24 px-2 py-1 text-sm bg-[var(--bg-surface)] border border-[var(--border)] rounded text-[var(--text-primary)] ${kr.trackingMode === 'auto' ? 'opacity-70 cursor-not-allowed' : 'focus-ring'}`}
         />
         <span className="text-xs text-[var(--text-tertiary)]">/ {kr.target}{kr.unit ? ` ${kr.unit}` : ''}</span>
+        {kr.trackingMode === 'auto' && (
+          <span className="text-[10px] text-[var(--text-tertiary)] bg-[var(--bg-surface)] px-1.5 py-0.5 rounded">auto from tasks</span>
+        )}
         <div className="flex-1 h-1.5 bg-[var(--bg-surface)] rounded overflow-hidden">
           <div
             className="h-full bg-[var(--accent)] transition-all"

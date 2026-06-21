@@ -21,7 +21,7 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { title, target, current, unit, startDate, endDate } = body;
+  const { title, target, current, unit, trackingMode, startDate, endDate } = body;
 
   let dateRange = null;
   if (startDate !== undefined || endDate !== undefined) {
@@ -60,6 +60,15 @@ export async function PATCH(
       return NextResponse.json({ error: 'unit must be a string up to 32 characters' }, { status: 400 });
     }
   }
+  if (trackingMode !== undefined) {
+    if (trackingMode !== 'auto' && trackingMode !== 'manual') {
+      return NextResponse.json({ error: 'trackingMode must be auto or manual' }, { status: 400 });
+    }
+    const effectiveUnit = (unit ?? existing.unit ?? '').trim().toLowerCase();
+    if (trackingMode === 'auto' && effectiveUnit !== '%') {
+      return NextResponse.json({ error: 'auto tracking requires unit to be %' }, { status: 400 });
+    }
+  }
 
   // If either side of the current/target relationship is being updated,
   // validate that current <= target. The PATCH may not include both
@@ -81,6 +90,7 @@ export async function PATCH(
       ...(target !== undefined && { target }),
       ...(current !== undefined && { current }),
       ...(unit !== undefined && { unit: unit || null }),
+      ...(trackingMode !== undefined && { trackingMode }),
       ...(dateRange && { startDate: dateRange.startDate, endDate: dateRange.endDate }),
     },
   });

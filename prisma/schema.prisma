@@ -266,19 +266,20 @@ model Objective {
 }
 
 model KeyResult {
-  id          String    @id @default(cuid())
-  title       String
-  target      Float
-  current     Float     @default(0)
-  unit        String?
-  position    Int       @default(0)
-  objectiveId String
-  objective   Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
-  cards       CardKeyResult[]
-  startDate   DateTime
-  endDate     DateTime
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  title        String
+  target       Float
+  current      Float     @default(0)
+  unit         String?
+  trackingMode String    @default("manual")
+  position     Int       @default(0)
+  objectiveId  String
+  objective    Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  cards        CardKeyResult[]
+  startDate    DateTime
+  endDate      DateTime
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@unique([objectiveId, position])
   @@index([position])

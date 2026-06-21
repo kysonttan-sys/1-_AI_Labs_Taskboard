@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/client';
 import ObjectiveList, { type SerializedObjective } from './ObjectiveList';
-import type { LinkedTask } from '@/lib/api/okrs';
+import type { LinkedTask, KeyResult } from '@/lib/api/okrs';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +45,7 @@ export default async function OkrsPage() {
         target: kr.target,
         current: kr.current,
         unit: kr.unit,
+        trackingMode: kr.trackingMode as KeyResult['trackingMode'],
         position: kr.position,
         objectiveId: kr.objectiveId,
         startDate: kr.startDate.toISOString(),

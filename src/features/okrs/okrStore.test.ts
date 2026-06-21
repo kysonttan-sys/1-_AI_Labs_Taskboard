@@ -44,6 +44,7 @@ function makeKr(overrides: Partial<KeyResult> = {}): KeyResult {
     target: 10,
     current: 0,
     unit: null,
+    trackingMode: 'manual',
     position: 0,
     objectiveId: 'obj-1',
     startDate: '2026-07-01T00:00:00Z',
