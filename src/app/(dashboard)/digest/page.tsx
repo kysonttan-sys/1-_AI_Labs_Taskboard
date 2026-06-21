@@ -14,6 +14,7 @@ import Link from 'next/link';
 import AiSuggestionPanel from '@/components/ai/AiSuggestionPanel';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 function formatDate(date: Date | string | null) {
   if (!date) return '-';

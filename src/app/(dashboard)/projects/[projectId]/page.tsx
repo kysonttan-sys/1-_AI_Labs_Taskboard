@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useProjectStore } from '@/features/projects/projectStore';
 import { useBoardStore } from '@/features/board/boardStore';
@@ -23,6 +23,7 @@ import ObjectiveCard from '@/app/(dashboard)/okrs/ObjectiveCard';
 import GanttChart from '@/components/calendar/GanttChart';
 import ProjectAiContextEditor from '@/components/ai/ProjectAiContextEditor';
 import AiSuggestionPanel from '@/components/ai/AiSuggestionPanel';
+import { getSocket } from '@/lib/socket';
 
 type TabKey = 'overview' | 'okrs' | 'boards' | 'gantt';
 
@@ -39,12 +40,39 @@ export default function ProjectDetailPage() {
   const { objectives, fetchObjectives } = useOkrStore();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
-  useEffect(() => {
+  const refreshData = useCallback(() => {
     fetchProjects();
     fetchBoards();
     fetchObjectives();
     fetchProjectBoardsData(projectId);
   }, [fetchProjects, fetchBoards, fetchObjectives, fetchProjectBoardsData, projectId]);
+
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
+
+  // Refresh when the page regains focus (e.g. coming back from a board).
+  useEffect(() => {
+    const handleFocus = () => refreshData();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refreshData]);
+
+  // Listen for real-time card changes from other tabs/users so the overview
+  // stats stay current without requiring a manual refresh.
+  useEffect(() => {
+    const socket = getSocket();
+    const handleCardChange = () => {
+      fetchObjectives();
+      fetchProjectBoardsData(projectId);
+    };
+    socket.on('card-updated', handleCardChange);
+    socket.on('card-moved', handleCardChange);
+    return () => {
+      socket.off('card-updated', handleCardChange);
+      socket.off('card-moved', handleCardChange);
+    };
+  }, [fetchObjectives, fetchProjectBoardsData, projectId]);
 
   const project = projects.find((p) => p.id === projectId);
   const projectBoards = boards.filter((b) => b.projectId === projectId);
