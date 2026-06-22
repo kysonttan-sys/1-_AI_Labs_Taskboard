@@ -32,7 +32,7 @@ const ACTIONS: { key: PromptType; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function AiSuggestionPanel({ projectId, className = '' }: AiSuggestionPanelProps) {
-  const { suggestion, loading, error, ask, reset, newChat, lastQuestion, messages } = useAiSuggestion();
+  const { suggestion, loading, error, ask, reset, newChat, lastQuestion, messages, restoreChat } = useAiSuggestion();
   const [activeKey, setActiveKey] = useState<PromptType | null>(null);
   const [expanded, setExpanded] = useState(true);
   const [customQuestion, setCustomQuestion] = useState('');
@@ -41,6 +41,10 @@ export default function AiSuggestionPanel({ projectId, className = '' }: AiSugge
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    restoreChat(projectId);
+  }, [projectId, restoreChat]);
 
   useEffect(() => {
     scrollToBottom();
@@ -57,6 +61,10 @@ export default function AiSuggestionPanel({ projectId, className = '' }: AiSugge
     setActiveKey('custom');
     await ask({ promptType: 'custom', projectId, question: customQuestion.trim() });
     setCustomQuestion('');
+  };
+
+  const handleNewChat = () => {
+    newChat(projectId);
   };
 
   const scopeLabel = projectId ? 'This project' : 'Whole taskboard';
@@ -78,7 +86,7 @@ export default function AiSuggestionPanel({ projectId, className = '' }: AiSugge
         <div className="flex items-center gap-1">
           {(suggestion || error || messages.length > 0) && (
             <button
-              onClick={newChat}
+              onClick={handleNewChat}
               className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-colors"
               title="Start a new chat"
             >

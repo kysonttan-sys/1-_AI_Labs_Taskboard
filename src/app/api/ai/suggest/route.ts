@@ -209,6 +209,35 @@ function buildHistoryPrompt(messages: Message[]) {
     .join('\n\n');
 }
 
+export async function GET(request: NextRequest) {
+  const { session, response } = await requireSession();
+  if (response) return response;
+
+  const { searchParams } = new URL(request.url);
+  const chatId = searchParams.get('chatId');
+  const projectId = searchParams.get('projectId') || undefined;
+
+  if (!chatId) {
+    return NextResponse.json({ error: 'chatId is required' }, { status: 400 });
+  }
+
+  if (projectId) {
+    const access = await requireProjectAccess(session, projectId);
+    if (access.response) return access.response;
+  }
+
+  const chat = await loadChat(chatId, session.userId);
+  if (!chat) {
+    return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
+  }
+
+  const messages = chat.messages
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+  return NextResponse.json({ chatId: chat.id, messages });
+}
+
 export async function POST(request: NextRequest) {
   const { session, response } = await requireSession();
   if (response) return response;
