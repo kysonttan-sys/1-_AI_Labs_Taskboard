@@ -76,7 +76,11 @@ export default async function DigestPage() {
   );
 
   const dueThisWeek = cards.filter(
-    (c) => c.dueDate && new Date(c.dueDate) >= weekStart && new Date(c.dueDate) <= weekEnd
+    (c) =>
+      c.dueDate &&
+      new Date(c.dueDate) >= weekStart &&
+      new Date(c.dueDate) <= weekEnd &&
+      !isCompletedStatus(c.status)
   );
 
   const overdue = cards.filter(
