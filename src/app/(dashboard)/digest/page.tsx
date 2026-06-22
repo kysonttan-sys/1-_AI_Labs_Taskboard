@@ -106,27 +106,97 @@ export default async function DigestPage() {
   });
   const topAssignees = Object.values(workload).sort((a, b) => b.count - a.count).slice(0, 8);
 
-  const formatActivity = (a: (typeof activities)[number]) => {
-    const actor = a.actor?.name || 'Someone';
-    const card = a.card?.title ? `"${a.card.title}"` : 'a card';
-    const board = a.board?.name ? `on ${a.board.name}` : '';
-    switch (a.type) {
-      case 'card_created':
-        return `${actor} created ${card} ${board}`;
-      case 'card_moved':
-        return `${actor} moved ${card} ${board}`;
-      case 'card_updated':
-        return `${actor} updated ${card} ${board}`;
-      case 'card_deleted':
-        return `${actor} deleted ${card} ${board}`;
-      case 'comment_created':
-        return `${actor} commented on ${card} ${board}`;
-      case 'okr_task_created':
-        return `${actor} linked ${card} to an OKR ${board}`;
-      default:
-        return `${actor} did ${a.type} ${board}`;
-    }
+  type ActivityItem = (typeof activities)[number];
+
+  const FIELD_LABELS: Record<string, string> = {
+    status: 'status',
+    priority: 'priority',
+    progress: 'progress',
+    dueDate: 'due date',
+    startDate: 'start date',
+    title: 'title',
+    description: 'description',
+    assigneeIds: 'assignees',
+    labelIds: 'labels',
+    listId: 'list',
+    boardId: 'board',
   };
+
+  function extractChangedFields(metadata: ActivityItem['metadata']): string[] {
+    if (!metadata || typeof metadata !== 'object') return [];
+    const keys = Object.keys(metadata).filter((k) => k !== 'title');
+    return keys.map((k) => FIELD_LABELS[k] || k);
+  }
+
+  function buildActivityText(group: ActivityItem[]) {
+    const first = group[0];
+    const actor = first.actor?.name || 'Someone';
+    const cardTitle = first.card?.title ? `"${first.card.title}"` : 'a card';
+    const board = first.board?.name ? ` on ${first.board.name}` : '';
+    const types = new Set(group.map((a) => a.type));
+
+    // Single, non-card-edit events — keep simple.
+    if (group.length === 1 && !['card_updated', 'card_moved'].includes(first.type)) {
+      switch (first.type) {
+        case 'card_created':
+          return `${actor} created ${cardTitle}${board}`;
+        case 'card_deleted':
+          return `${actor} deleted ${cardTitle}${board}`;
+        case 'comment_added':
+          return `${actor} commented on ${cardTitle}${board}`;
+        case 'checklist_item_completed':
+          return `${actor} completed a checklist item on ${cardTitle}${board}`;
+        case 'okr_linked':
+        case 'okr_task_created':
+          return `${actor} linked ${cardTitle} to an OKR${board}`;
+        default:
+          return `${actor} did ${first.type}${board}`;
+      }
+    }
+
+    // Merge card_updated / card_moved groups.
+    const changedFields = Array.from(
+      new Set(group.flatMap((a) => extractChangedFields(a.metadata))),
+    );
+    const moved = types.has('card_moved');
+    const updated = types.has('card_updated');
+
+    let action: string;
+    if (moved && updated) action = 'moved and updated';
+    else if (moved) action = 'moved';
+    else action = 'updated';
+
+    const fieldText = changedFields.length > 0 ? ` — ${changedFields.join(', ')}` : '';
+    return `${actor} ${action} ${cardTitle}${board}${fieldText}`;
+  }
+
+  function groupActivities(items: ActivityItem[]) {
+    const GROUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+    const groups: ActivityItem[][] = [];
+
+    for (const item of items) {
+      const lastGroup = groups[groups.length - 1];
+      const last = lastGroup?.[lastGroup.length - 1];
+      const canGroup =
+        last &&
+        item.cardId &&
+        item.cardId === last.cardId &&
+        item.actorId === last.actorId &&
+        ['card_updated', 'card_moved'].includes(item.type) &&
+        ['card_updated', 'card_moved'].includes(last.type) &&
+        new Date(item.createdAt).getTime() - new Date(last.createdAt).getTime() <= GROUP_WINDOW_MS;
+
+      if (canGroup) {
+        lastGroup.push(item);
+      } else {
+        groups.push([item]);
+      }
+    }
+
+    return groups;
+  }
+
+  const groupedActivities = groupActivities(activities);
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6">
@@ -349,21 +419,25 @@ export default async function DigestPage() {
             <Activity className="h-4 w-4 text-[var(--accent)]" />
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">Recent activity</h2>
           </div>
-          {activities.length === 0 ? (
+          {groupedActivities.length === 0 ? (
             <p className="text-sm text-[var(--text-tertiary)]">No recent activity.</p>
           ) : (
             <div className="space-y-2">
-              {activities.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-start justify-between gap-3 text-sm py-1.5 border-b border-[var(--border)] last:border-0"
-                >
-                  <span className="text-[var(--text-secondary)]">{formatActivity(a)}</span>
-                  <span className="text-xs text-[var(--text-tertiary)] shrink-0">
-                    {formatDate(a.createdAt)}
-                  </span>
-                </div>
-              ))}
+              {groupedActivities.map((group) => {
+                const first = group[0];
+                const last = group[group.length - 1];
+                return (
+                  <div
+                    key={first.id}
+                    className="flex items-start justify-between gap-3 text-sm py-1.5 border-b border-[var(--border)] last:border-0"
+                  >
+                    <span className="text-[var(--text-secondary)]">{buildActivityText(group)}</span>
+                    <span className="text-xs text-[var(--text-tertiary)] shrink-0">
+                      {formatDate(last.createdAt)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
