@@ -344,7 +344,9 @@ export async function PATCH(
       if (resolvedListId !== undefined && resolvedListId !== before.listId) metadata.listId = { from: before.listId, to: resolvedListId };
       if (resolvedBoardId !== undefined && resolvedBoardId !== before.boardId) metadata.boardId = { from: before.boardId, to: resolvedBoardId };
 
-      if (Object.keys(metadata).length > 0) {
+      // Only record activity when something meaningful changed. Skip pure position-only updates.
+      const meaningfulKeys = Object.keys(metadata).filter((k) => k !== 'position');
+      if (meaningfulKeys.length > 0) {
         await createActivityEvent({
           type: resolvedListId !== undefined && resolvedListId !== before.listId ? 'card_moved' : 'card_updated',
           actorId: triggerUserId,

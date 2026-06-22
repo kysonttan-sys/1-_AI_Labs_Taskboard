@@ -154,21 +154,26 @@ export async function PATCH(
   });
 
   const triggerUserId = auth.session.userId;
-  await createActivityEvent({
-    type: 'card_moved',
-    actorId: triggerUserId,
-    boardId: targetList.boardId,
-    cardId,
-    listId: targetListId,
-    metadata: {
-      fromListId: sourceListId,
-      toListId: targetListId,
-      fromListTitle: sourceListTitle,
-      toListTitle: targetList.title,
-      title: card.title,
-      ...(targetStatus ? { status: targetStatus } : {}),
-    },
-  });
+
+  // Only record a move activity when the card actually changed lists or status.
+  // Pure reordering within the same list should not generate noise.
+  if (!isSameList || targetStatus) {
+    await createActivityEvent({
+      type: 'card_moved',
+      actorId: triggerUserId,
+      boardId: targetList.boardId,
+      cardId,
+      listId: targetListId,
+      metadata: {
+        fromListId: sourceListId,
+        toListId: targetListId,
+        fromListTitle: sourceListTitle,
+        toListTitle: targetList.title,
+        title: card.title,
+        ...(targetStatus ? { status: targetStatus } : {}),
+      },
+    });
+  }
 
   broadcastToBoard(targetList.boardId, 'card-moved', { cardId, userId: triggerUserId });
 
