@@ -26,6 +26,7 @@ model User {
   triggeredNotifications Notification[] @relation("NotificationTrigger")
   objectives             Objective[]
   activities             ActivityEvent[]
+  aiChats               AiChat[]
 }
 
 model Project {
@@ -38,6 +39,7 @@ model Project {
 
   boards     Board[]
   objectives Objective[]
+  aiChats    AiChat[]
 }
 
 model Board {
@@ -316,4 +318,31 @@ model ActivityEvent {
 
   @@index([boardId, createdAt])
   @@index([createdAt])
+}
+
+model AiChat {
+  id          String        @id @default(cuid())
+  userId      String
+  projectId   String?
+  title       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages    AiChatMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model AiChatMessage {
+  id        String   @id @default(cuid())
+  chatId    String
+  role      String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  chat      AiChat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, createdAt])
 }

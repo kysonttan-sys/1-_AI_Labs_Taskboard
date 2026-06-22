@@ -163,6 +163,52 @@ function buildUserPrompt(
   }
 }
 
+interface Message {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface Chat {
+  id: string;
+  projectId: string | null;
+  title: string | null;
+  messages: Message[];
+}
+
+async function loadChat(chatId: string, userId: string): Promise<Chat | null> {
+  const chat = await prisma.aiChat.findFirst({
+    where: { id: chatId, userId },
+    include: { messages: { orderBy: { createdAt: 'asc' } } },
+  });
+  if (!chat) return null;
+  return {
+    id: chat.id,
+    projectId: chat.projectId,
+    title: chat.title,
+    messages: chat.messages.map((m) => ({ role: m.role as Message['role'], content: m.content })),
+  };
+}
+
+async function createChat(userId: string, projectId?: string): Promise<Chat> {
+  const chat = await prisma.aiChat.create({
+    data: { userId, projectId },
+  });
+  return { id: chat.id, projectId: chat.projectId, title: chat.title, messages: [] };
+}
+
+async function saveMessage(chatId: string, role: Message['role'], content: string) {
+  return prisma.aiChatMessage.create({
+    data: { chatId, role, content },
+  });
+}
+
+function buildHistoryPrompt(messages: Message[]) {
+  if (messages.length === 0) return '';
+  return messages
+    .map((m) => `${m.role === 'user' ? 'User' : m.role === 'assistant' ? 'Assistant' : 'System'}: ${m.content}`)
+    .join('\n\n');
+}
+
 export async function POST(request: NextRequest) {
   const { session, response } = await requireSession();
   if (response) return response;
@@ -182,7 +228,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { promptType?: unknown; projectId?: unknown; question?: unknown };
+  let body: { promptType?: unknown; projectId?: unknown; question?: unknown; chatId?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -192,18 +238,42 @@ export async function POST(request: NextRequest) {
   const promptType = (body.promptType as PromptType) || 'focus';
   const projectId = typeof body.projectId === 'string' ? body.projectId : undefined;
   const question = typeof body.question === 'string' ? body.question : undefined;
+  let chatId = typeof body.chatId === 'string' ? body.chatId : undefined;
 
   if (projectId) {
     const access = await requireProjectAccess(session, projectId);
     if (access.response) return access.response;
   }
 
-  const context = projectId ? await buildProjectContext(projectId) : await buildGlobalContext();
+  // Load or create chat
+  let chat: Chat | null = null;
+  if (chatId) {
+    chat = await loadChat(chatId, session.userId);
+    if (!chat) {
+      return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
+    }
+  }
+  if (!chat) {
+    chat = await createChat(session.userId, projectId);
+  }
+  chatId = chat.id;
+
+  // Ensure projectId from chat is used when caller did not pass one
+  const effectiveProjectId = projectId || chat.projectId;
+
+  const context = effectiveProjectId ? await buildProjectContext(effectiveProjectId) : await buildGlobalContext();
   if (!context) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const prompt = buildUserPrompt(promptType, context, question);
+  const currentUserContent = buildUserPrompt(promptType, context, question);
+  const historyText = buildHistoryPrompt(chat.messages);
+  const prompt = historyText
+    ? `${historyText}\n\n${currentUserContent}`
+    : currentUserContent;
+
+  // Save the user's message
+  await saveMessage(chatId, 'user', currentUserContent);
 
   try {
     const url = `${ollamaUrl.replace(/\/$/, '')}/api/generate`;
@@ -241,7 +311,10 @@ export async function POST(request: NextRequest) {
     const data = await res.json();
     const suggestion = typeof data.response === 'string' ? data.response : JSON.stringify(data);
 
-    return NextResponse.json({ suggestion });
+    // Save the assistant's response
+    await saveMessage(chatId, 'assistant', suggestion);
+
+    return NextResponse.json({ suggestion, chatId });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAiSuggestion, type PromptType } from '@/features/ai/useAiSuggestion';
 import {
   Sparkles,
@@ -15,6 +15,7 @@ import {
   Footprints,
   Send,
   MessageSquare,
+  Plus,
 } from 'lucide-react';
 
 interface AiSuggestionPanelProps {
@@ -31,10 +32,19 @@ const ACTIONS: { key: PromptType; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function AiSuggestionPanel({ projectId, className = '' }: AiSuggestionPanelProps) {
-  const { suggestion, loading, error, ask, reset, lastQuestion } = useAiSuggestion();
+  const { suggestion, loading, error, ask, reset, newChat, lastQuestion, messages } = useAiSuggestion();
   const [activeKey, setActiveKey] = useState<PromptType | null>(null);
   const [expanded, setExpanded] = useState(true);
   const [customQuestion, setCustomQuestion] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, suggestion, loading, error]);
 
   const handleAction = async (promptType: PromptType) => {
     setActiveKey(promptType);
@@ -46,6 +56,7 @@ export default function AiSuggestionPanel({ projectId, className = '' }: AiSugge
     if (!customQuestion.trim() || loading) return;
     setActiveKey('custom');
     await ask({ promptType: 'custom', projectId, question: customQuestion.trim() });
+    setCustomQuestion('');
   };
 
   const scopeLabel = projectId ? 'This project' : 'Whole taskboard';
@@ -65,6 +76,16 @@ export default function AiSuggestionPanel({ projectId, className = '' }: AiSugge
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {(suggestion || error || messages.length > 0) && (
+            <button
+              onClick={newChat}
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-colors"
+              title="Start a new chat"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New chat
+            </button>
+          )}
           {(suggestion || error) && (
             <button
               onClick={reset}
@@ -129,7 +150,7 @@ export default function AiSuggestionPanel({ projectId, className = '' }: AiSugge
             </button>
           </form>
 
-          {!suggestion && !error && !loading && (
+          {!suggestion && !error && messages.length === 0 && !loading && (
             <p className="text-xs text-[var(--text-tertiary)]">
               The AI reads {projectId ? 'this project’s' : 'all'} tasks, OKRs, deadlines, and project context,
               then answers using your local Ollama. Add project context in the “Project context for AI”
@@ -137,46 +158,66 @@ export default function AiSuggestionPanel({ projectId, className = '' }: AiSugge
             </p>
           )}
 
-          {loading && (
-            <div className="flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
-              <Loader2 className="h-4 w-4 animate-spin text-[var(--accent)]" />
-              Asking your local Ollama...
-            </div>
-          )}
-
-          {error && !loading && (
-            <div className="rounded-md bg-red-500/10 p-3 text-sm text-red-400">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="font-medium">AI assistant unavailable</p>
-                  <p className="text-red-300/80">{error}</p>
+          <div className="max-h-96 overflow-y-auto space-y-3">
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-md px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {msg.content}
                 </div>
               </div>
-            </div>
-          )}
+            ))}
 
-          {suggestion && !loading && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
-                <MessageSquare className="h-3 w-3" />
-                {lastQuestion ? lastQuestion : 'Suggestion'}
+            {loading && (
+              <div className="flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
+                <Loader2 className="h-4 w-4 animate-spin text-[var(--accent)]" />
+                Asking your local Ollama...
               </div>
-              <div className="bg-[var(--bg-surface)] rounded-md p-3 text-sm text-[var(--text-secondary)] whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
-                {suggestion}
+            )}
+
+            {error && !loading && (
+              <div className="rounded-md bg-red-500/10 p-3 text-sm text-red-400">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-medium">AI assistant unavailable</p>
+                    <p className="text-red-300/80">{error}</p>
+                  </div>
+                </div>
               </div>
-              {activeKey && activeKey !== 'custom' && (
-                <button
-                  onClick={() => handleAction(activeKey)}
-                  disabled={loading}
-                  className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline disabled:opacity-60"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  Regenerate
-                </button>
-              )}
-            </div>
-          )}
+            )}
+
+            {suggestion && !loading && messages.length === 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
+                  <MessageSquare className="h-3 w-3" />
+                  {lastQuestion ? lastQuestion : 'Suggestion'}
+                </div>
+                <div className="bg-[var(--bg-surface)] rounded-md p-3 text-sm text-[var(--text-secondary)] whitespace-pre-wrap leading-relaxed">
+                  {suggestion}
+                </div>
+                {activeKey && activeKey !== 'custom' && (
+                  <button
+                    onClick={() => handleAction(activeKey)}
+                    disabled={loading}
+                    className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline disabled:opacity-60"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Regenerate
+                  </button>
+                )}
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
       )}
     </div>
