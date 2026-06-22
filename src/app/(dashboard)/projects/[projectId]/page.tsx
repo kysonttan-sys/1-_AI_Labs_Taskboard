@@ -196,6 +196,8 @@ export default function ProjectDetailPage() {
       {/* Overview tab */}
       {activeTab === 'overview' && (
         <div className="space-y-4">
+          <AiSuggestionPanel projectId={projectId} className="" />
+
           {/* Top stat cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="card-base p-4">
@@ -261,8 +263,6 @@ export default function ProjectDetailPage() {
           </div>
 
           <ProjectAiContextEditor projectId={projectId} initialContext={project.aiContext} />
-
-          <AiSuggestionPanel projectId={projectId} className="" />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Upcoming deadlines */}
